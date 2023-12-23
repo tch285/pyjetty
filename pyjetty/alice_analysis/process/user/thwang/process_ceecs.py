@@ -41,21 +41,22 @@ def logbins(xmin, xmax, nbins):
     centers = np.sqrt(arr[:-1] * arr[1:])
     lowerr = centers - arr[:-1]
     uperr = arr[1:] - centers
-    return arr, centers, lowerr, uperr
+    bin_widths = arr[1:] - arr[:-1]
+    return arr, centers, lowerr, uperr, bin_widths
 
 class CEEC(process_base.ProcessBase):
     def __init__(self, input='', config_file='', output_dir='', debug_lvl=0, clargs=None, **kwargs):
         with open(config_file, 'r') as stream:
             config = yaml.safe_load(stream)
-        
 
         super(CEEC, self).__init__(input, config_file, output_dir, debug_lvl, **kwargs)
-        if not os.path.exists(self.output_dir):
-            os.makedirs(self.output_dir)
+        # note that self.output_dir gains a / at the end if not ending with one
         process_base.ProcessBase.initialize_config(self)
 
         # self.jet_levels = config["jet_levels"] # levels = ["p", "h", "ch"]
         # self.jetR_list = config["jetR"]
+        self.Njet1 = 0
+        self.Njet2 = 0
         self.jetR = 0.4
         self.jet_level="ch"
         self.nev = max(clargs.nev, 1)
@@ -95,20 +96,22 @@ class CEEC(process_base.ProcessBase):
         self.save_output_objects()
     
     def init_hists(self):
-        nbins=50
-        self.RL_bins, self.RL_centers, self.lowerr, self.uperr = logbins(1e-4, 1, nbins)
+        nbins=40
+        self.RL_bins, self.RL_centers, self.lowerr, self.uperr, self.bin_widths = logbins(1e-2, 1, nbins)
 
-        self.histTR, _ = np.histogram(a=[0], bins=self.RL_bins, weights=[0])
-        self.histQQ, _ = np.histogram(a=[0], bins=self.RL_bins, weights=[0])
-        self.histPM, _ = np.histogram(a=[0], bins=self.RL_bins, weights=[0])
-        self.histPP, _ = np.histogram(a=[0], bins=self.RL_bins, weights=[0])
-        self.histMM, _ = np.histogram(a=[0], bins=self.RL_bins, weights=[0])
+        self.histTR = np.zeros(nbins)
+        self.histQQ = np.zeros(nbins)
+        self.histPM = np.zeros(nbins)
+        self.histPP = np.zeros(nbins)
+        self.histMM = np.zeros(nbins)
     
     def init_jet_tools(self):
         self.jet_def = fj.JetDefinition(fj.antikt_algorithm, self.jetR)
         self.track_selector_ch = fj.SelectorPtMin(0.15)
         self.pfc_selector1 = fj.SelectorPtMin(1.)
         self.jet_selector = fj.SelectorPtMin(5) & fj.SelectorAbsEtaMax(self.max_eta_hadron - self.jetR)
+        # QUESTION: does this apply both ptmin of 5 and abseta max of 0.5? or is it an "or"?
+        # also what is pfc? this selector is used on 
 
     def calculate_events(self, pythia):
         self.forceHadronSurvive = 0
@@ -123,7 +126,6 @@ class CEEC(process_base.ProcessBase):
             hstatus = pythia.forceHadronLevel()
             if not hstatus:
                 continue
-            self.forceHadronSurvive += 1
 
             # full particle level
             self.parts_pythia_h = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal], 0, True)
@@ -131,16 +133,27 @@ class CEEC(process_base.ProcessBase):
             # charged particle level
             self.parts_pythia_ch = pythiafjext.vectorize_select(pythia, [pythiafjext.kFinal, pythiafjext.kCharged], 0, True)
 
+            # my version of Wenqing's hNevents?
+            self.forceHadronSurvive += 1
+
             self.find_jets_fill_trees()
         
         print(f"Total events: {self.nev}")
         print(f"nAccepted events: {pythia.info.nAccepted()}")
         print(f"forceHadronSurvive events: {self.forceHadronSurvive}")
+        print(f"rejected at hadronization step: {pythia.info.nAccepted() - self.forceHadronSurvive}")
 
-    def find_jets_fill_trees(self):
+    def find_jets_fill_trees(self): # run after every event
         jets_p = fj.sorted_by_pt(self.jet_selector(self.jet_def(self.parts_pythia_p)))
         jets_h = fj.sorted_by_pt(self.jet_selector(self.jet_def(self.parts_pythia_h)))
         jets_ch = fj.sorted_by_pt(self.jet_selector(self.jet_def(self.track_selector_ch(self.parts_pythia_ch))))
+        # in order of operations:
+        # get all event constituents
+        # apply track_selector_ch = remove all particles with pT < 150 MeV 
+        # apply jet definition and organize into jets
+        # QUESTION: does jet_selector ptmin(5) and absetamax(max_eta_hadron-jetR=0.9-0.4=0.5) apply on single jets or constituents inside jet?
+            # my guess is that it works on the single jet, since then absetamax limits jets to |eta|<0.5, which is equivalent to max_eta_hadron=0.9
+        # sort by pt QUESTION: why?
 
         # R_label = str(self.jetR).replace('.', '') + 'Scaled'
 
@@ -153,13 +166,15 @@ class CEEC(process_base.ProcessBase):
 
         #-------------------------------------------------------------
         # loop over jets and fill EEC histograms with jet constituents
+        self.Njet2 += len(jets)
         for j in jets:
             self.fill_jet_histograms(self.jet_level, j, self.jetR)
+            self.Njet1 += 1
 
     def fill_jet_histograms(self, level, jet, jetR):
         if self.leading_pt > 0:
-            constituents = fj.sorted_by_pt(jet.constituents())
-            if constituents[0].perp() < self.leading_pt:
+            constituents = fj.sorted_by_pt(jet.constituents()) # sorts highest to lowest pT, index 0 has highest pT
+            if constituents[0].perp() < self.leading_pt: # if highest pT is below this minimum, then all of them are, so ignore
                 return
         
         _c_select0 = fj.vectorPJ()
@@ -169,8 +184,7 @@ class CEEC(process_base.ProcessBase):
                     _c_select0.push_back(c)
             else:
                 _c_select0.push_back(c)
-        # cb0 = ecorrel.CorrelatorBuilder(_c_select0, jet.perp(), self.npoint, self.npower, self.dphi_cut, self.deta_cut)
-        cb0 = ecorrel.CorrelatorBuilder(_c_select0, self.npower, self.npoint)
+        cb0 = ecorrel.CorrelatorBuilder(_c_select0, jet.perp(), self.npoint, self.npower, self.dphi_cut, self.deta_cut)
 
         # select constituents with 1 GeV cut
         _c_select1 = fj.vectorPJ()
@@ -180,69 +194,87 @@ class CEEC(process_base.ProcessBase):
                     _c_select1.push_back(c)
             else:
                 _c_select1.push_back(c)
-        # cb1 = ecorrel.CorrelatorBuilder(_c_select1, jet.perp(), self.npoint, self.npower, self.dphi_cut, self.deta_cut)
-        cb1 = ecorrel.CorrelatorBuilder(_c_select1, self.npower, self.npoint)
+        cb1 = ecorrel.CorrelatorBuilder(_c_select1, jet.perp(), self.npoint, self.npower, self.dphi_cut, self.deta_cut)
+
         for ipoint in range(2, self.npoint+1):
             assert cb0.correlator(ipoint).rs().size() == cb0.correlator(ipoint).weights().size()
             assert cb1.correlator(ipoint).rs().size() == cb1.correlator(ipoint).weights().size()
-            print("the type of rs() is ", type(cb1.correlator(ipoint).rs()))
+            # print("the type of rs() is ", type(cb1.correlator(ipoint).rs())) # type is ecorrel.DoubleVector
             self.calc_mod_weights(_c_select1, cb1.correlator(ipoint))
-            self.histTR += np.histogram(cb1.correlator(ipoint).rs(), self.RL_bins, self.TR_weights)[0]
-            self.histQQ += np.histogram(cb1.correlator(ipoint).rs(), self.RL_bins, self.QQ_weights)[0]
-            self.histPM += np.histogram(cb1.correlator(ipoint).rs(), self.RL_bins, self.PM_weights)[0]
-            self.histPP += np.histogram(cb1.correlator(ipoint).rs(), self.RL_bins, self.PP_weights)[0]
-            self.histMM += np.histogram(cb1.correlator(ipoint).rs(), self.RL_bins, self.MM_weights)[0]
+            self.histTR += np.histogram(cb1.correlator(ipoint).rs(), self.RL_bins, weights = self.TR_weights)[0]
+            self.histQQ += np.histogram(cb1.correlator(ipoint).rs(), self.RL_bins, weights = self.QQ_weights)[0]
+            self.histPM += np.histogram(cb1.correlator(ipoint).rs(), self.RL_bins, weights = self.PM_weights)[0]
+            self.histPP += np.histogram(cb1.correlator(ipoint).rs(), self.RL_bins, weights = self.PP_weights)[0]
+            self.histMM += np.histogram(cb1.correlator(ipoint).rs(), self.RL_bins, weights = self.MM_weights)[0]
     
     def calc_mod_weights(self, const, corr):
-        TR_weights=np.zeros(corr.weights().size())
-        QQ_weights=np.zeros(corr.weights().size())
-        PM_weights=np.zeros(corr.weights().size())
-        PP_weights=np.zeros(corr.weights().size())
-        MM_weights=np.zeros(corr.weights().size())
+        self.TR_weights=np.zeros(corr.weights().size())
+        self.QQ_weights=np.zeros(corr.weights().size())
+        self.PM_weights=np.zeros(corr.weights().size())
+        self.PP_weights=np.zeros(corr.weights().size())
+        self.MM_weights=np.zeros(corr.weights().size())
         for i in range(corr.rs().size()):
             part1 = int(corr.indices1()[i])
             part2 = int(corr.indices2()[i])
-            c1 = const[part1]
-            c2 = const[part2]
-            charge_product = pythiafjext.getPythia8Particle(c1).charge() * pythiafjext.getPythia8Particle(c2).charge()
-            TR_weights[i] = corr.weights()[i] if charge_product != 0 else 0
-            QQ_weights[i] = corr.weights()[i] * charge_product
-            PM_weights[i] = corr.weights()[i] if charge_product < 0 else 0    
-            PP_weights[i] = corr.weights()[i] if c1 > 0 and c2 > 0 else 0    
-            MM_weights[i] = corr.weights()[i] if c1 < 0 and c2 < 0 else 0    
+            c1 = pythiafjext.getPythia8Particle(const[part1]).charge()
+            c2 = pythiafjext.getPythia8Particle(const[part2]).charge()
+            self.TR_weights[i] = corr.weights()[i] if c1 * c2 != 0 else 0
+            self.QQ_weights[i] = corr.weights()[i] * c1 * c2
+            self.PM_weights[i] = corr.weights()[i] if c1 * c2 < 0 else 0    
+            self.PP_weights[i] = corr.weights()[i] if c1 > 0 and c2 > 0 else 0    
+            self.MM_weights[i] = corr.weights()[i] if c1 < 0 and c2 < 0 else 0
     
     def scale(self, pythia):
         # Scale all jet histograms by the appropriate factor from generated cross section and the number of accepted events
-        scale_f = pythia.info.sigmaGen() / self.hNevents.GetBinContent(1)
-        print("scaling factor is",scale_f)
+        scale_f = pythia.info.sigmaGen() / self.forceHadronSurvive
+        print("scale_f is ", scale_f)
+        print("scale_f is ", scale_f)
+        scale_j = self.Njet1 * pythia.info.sigmaGen() / self.forceHadronSurvive
+        print("scale_j is ", scale_j)
+        # print("scaling factor is",scale_f)
+        # print("hist type", type(self.histTR))
+        # print("hist is", self.histTR)
+        # print("hist dtype", self.histTR.dtype)
+        # print("scalef", type(scale_f))
+        # print(f"weights are {self.TR_weights}")
+        # self.histTR *= scale_f
+        # self.histQQ *= scale_f
+        # self.histPM *= scale_f
+        # self.histPP *= scale_f
+        # self.histMM *= scale_f
+        for hist in [self.histTR, self.histQQ, self.histPM, self.histPP, self.histMM]:
+            for i in range(len(hist)):
+                hist[i] *= (scale_f / self.bin_widths[i] / scale_j)
 
-        self.histTR *= scale_f
-        self.histQQ *= scale_f
-        self.histPM *= scale_f
-        self.histPP *= scale_f
-        self.histMM *= scale_f
+
+        
 
     def save_output_objects(self):
+        print("njet one by one", self.Njet1)
+        print("njet alltogether", self.Njet2)
         # TODO: calculate y-errors
-        # self.histTR_err = 
-        # self.histQQ
-        # self.histPM
-        # self.histPP
-        # self.histMM
+        # for hist in [self.histTR, self.histQQ, self.histPM, self.histPP, self.histMM]:
+        fig1, axs1 = plt.subplots()
+        axs1.errorbar(self.RL_centers, self.histTR, None, [self.lowerr, self.uperr], 'ro', label = "chtr")
+        axs1.errorbar(self.RL_centers, self.histQQ, None, [self.lowerr, self.uperr], 'go', label = "QQ")
+        axs1.errorbar(self.RL_centers, self.histPM, None, [self.lowerr, self.uperr], 'bo', label = "PM")
+        axs1.errorbar(self.RL_centers, self.histPP, None, [self.lowerr, self.uperr], 'co', label = "PP")
+        axs1.errorbar(self.RL_centers, self.histMM, None, [self.lowerr, self.uperr], 'mo', label = "MM")
+        axs1.set_xscale('log')
+        axs1.set_title('57 < $\hat{p}_\mathrm{T}$ < 70')
+        axs1.set_xlabel('$R_\mathrm{L}$', fontsize=14)
+        axs1.set_ylabel(r'$\frac{1}{N_\mathrm{jet}}\times d\sigma/dR_\mathrm{L}$', fontsize=14)
+        fig1.suptitle('cEECs')
+        label = "$p_\mathrm{T}^\mathrm{jet} > 5$\n$|\eta_\mathrm{jet}| < 0.5$\n$p_\mathrm{T}^\mathrm{tr} > .15$\n$p^\mathrm{EEC tr}_\mathrm{T} > 1$\n"
+        lab2 = "$N_\mathrm{ev}=$" + f"{self.nev}"
+        axs1.text(0.05, 0.95, label + lab2, fontsize = 9, transform=axs1.transAxes, verticalalignment='top')
+        axs1.legend()
+
+        np.savez(f"{self.output_dir}hists2.npz", centers=self.RL_centers, tr = self.histTR, qq = self.histQQ, 
+                 pm = self.histPM, pp = self.histPP, mm = self.histMM)
+        fig1.savefig(f"{self.output_dir}graph2.png")
 
 
-        fig1, axs1 = plt.subplots(1, 3, sharey='row')
-        axs1[0].errorbar(self.RL_centers, self.histTR, [self.lowerr, self.uperr], None, 'ro')
-        axs1[0].errorbar(self.RL_centers, self.histQQ, [self.lowerr, self.uperr], None, 'ro')
-        axs1[0].errorbar(self.RL_centers, self.histPM, [self.lowerr, self.uperr], None, 'ro')
-        axs1.set_yscale('log')
-        fig2, axs2 = plt.subplots(1, 3, sharey='row')
-        axs1[0].errorbar(self.RL_centers, self.histPP, [self.lowerr, self.uperr], None, 'ro')
-        axs1[0].errorbar(self.RL_centers, self.histMM, [self.lowerr, self.uperr], None, 'ro')
-        axs2.set_yscale('log')
-
-        fig1.savefig("pic1.png")
-        fig2.savefig("pic2.png")
 
 
 
@@ -264,7 +296,7 @@ if __name__ == '__main__':
     pyconf.add_standard_pythia_args(parser)
     # Could use --py-seed
     parser.add_argument('-o', '--output-dir', action='store', type=str, default='./', 
-                        help='Output directory for generated ROOT file(s)')
+                        help='Output directory for generated files and plots')
     parser.add_argument('--tree-output-fname', default="AnalysisResults.root", type=str,
                         help="Filename for the (unscaled) generated particle ROOT TTree")
     parser.add_argument('-c', '--config-file', action='store', type=str, default='config/analysis_config.yaml',
@@ -369,5 +401,3 @@ class Histogram1D:
         fig.savefig(f"{results_path}/{filename}.png")
         if show:
             plt.show()
-
-        
