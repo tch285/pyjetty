@@ -126,9 +126,15 @@ class PythiaGenENC(process_base.ProcessBase):
         pt_bins = linbins(self.pT_min, self.pT_max, self.pT_nbins)
         RL_bins = logbins(self.RL_min, self.RL_max, self.RL_nbins)
         Nconst_bins = linbins(self.Nconst_min, self.Nconst_max, self.Nconst_nbins)
-        
         self.hNevents = ROOT.TH1I("hNevents", 'Number accepted events (unscaled)', 2, -0.5, 1.5)
-        self.jetpT = ROOT.TH1I("jetpT", 'jet p_{T} distribution:jet p_{T} (GeV):Counts', self.pT_nbins, pt_bins)
+        self.jetpT_ch = ROOT.TH1I("h_jetpT_ch", 'jet p_{T} distribution:jet p_{T} (GeV):Counts', self.pT_nbins, pt_bins)
+        self.jetpT_h = ROOT.TH1I("h_jetpT_h", 'jet p_{T} distribution:jet p_{T} (GeV):Counts', self.pT_nbins, pt_bins)
+
+        def add_ENC_histogram(name):
+            print(f"Initializing histogram {name}")
+            h = ROOT.TH2D(name, name, self.pT_nbins, pt_bins, self.RL_nbins, RL_bins)
+            setattr(self, name, h)
+            getattr(self, hist_list_name).append(h)
 
         for jetR in self.jetR_list:
 
@@ -141,31 +147,18 @@ class PythiaGenENC(process_base.ProcessBase):
             for jet_level in self.jet_levels:
                 # ENC histograms (jet level == part level)
                 for ipoint in range(2, self.npoint+1):
-                    name = f'h_ENC{ipoint}_JetPt_{jet_level}_R{R_label}_trk00'
-                    print('Initialize histogram',name)
-                    h = ROOT.TH2D(name, f"{name}:jet pT (GeV):R_L", self.pT_nbins, pt_bins, self.RL_nbins, RL_bins)
-                    setattr(self, name, h)
-                    getattr(self, hist_list_name).append(h)
-
-                    name = f'h_ENC{ipoint}_JetPt_{jet_level}_R{R_label}_trk10'
-                    print('Initialize histogram',name)
-                    h = ROOT.TH2D(name, f"{name}:jet pT (GeV):R_L", self.pT_nbins, pt_bins, self.RL_nbins, RL_bins)
-                    setattr(self, name, h)
-                    getattr(self, hist_list_name).append(h)
+                    add_ENC_histogram(f'h_ENC{ipoint}TR_JetPt_{jet_level}_R{R_label}_trk00')
+                    add_ENC_histogram(f'h_ENC{ipoint}TR_JetPt_{jet_level}_R{R_label}_trk10')
+                    add_ENC_histogram(f'h_ENC{ipoint}QQ_JetPt_{jet_level}_R{R_label}_trk10')
+                    add_ENC_histogram(f'h_ENC{ipoint}PP_JetPt_{jet_level}_R{R_label}_trk10')
+                    add_ENC_histogram(f'h_ENC{ipoint}PM_JetPt_{jet_level}_R{R_label}_trk10')
+                    add_ENC_histogram(f'h_ENC{ipoint}MM_JetPt_{jet_level}_R{R_label}_trk10')
+                    # add_ENC_histogram(f'h_ENC{ipoint}AL_JetPt_{jet_level}_R{R_label}_trk10')
 
                     # only save charge separation for pT>1GeV for now
-                    if jet_level == "ch":
-                        name = f'h_ENC{ipoint}_JetPt_{jet_level}_R{R_label}_unlike_trk10'
-                        print('Initialize histogram',name)
-                        h = ROOT.TH2D(name, f"{name}:jet pT (GeV):R_L", self.pT_nbins, pt_bins, self.RL_nbins, RL_bins)
-                        setattr(self, name, h)
-                        getattr(self, hist_list_name).append(h)
-
-                        name = f'h_ENC{ipoint}_JetPt_{jet_level}_R{R_label}_like_trk10'
-                        print('Initialize histogram', name)
-                        h = ROOT.TH2D(name, f"{name}:jet pT:R_L", self.pT_nbins, pt_bins, self.RL_nbins, RL_bins)
-                        setattr(self, name, h)
-                        getattr(self, hist_list_name).append(h)
+                    # if jet_level == "ch":
+                    #     add_ENC_histogram(f'h_ENC{ipoint}_JetPt_{jet_level}_R{R_label}_unlike_trk10')
+                    #     add_ENC_histogram(f'h_ENC{ipoint}_JetPt_{jet_level}_R{R_label}_like_trk10')
 
                 # Jet pt vs N constituents
                 name = f'h_Nconst_JetPt_{jet_level}_R{R_label}_trk00'
@@ -266,19 +259,21 @@ class PythiaGenENC(process_base.ProcessBase):
                     jets = jets_p
                 if jet_level == "h":
                     jets = jets_h
+                    target_jetpT_hist = self.jetpT_h
                 if jet_level == "ch":
                     jets = jets_ch
+                    target_jetpT_hist = self.jetpT_ch
 
                 #-------------------------------------------------------------
                 # loop over jets and fill EEC histograms with jet constituents
                 for j in jets:
+                    target_jetpT_hist.Fill(j.perp())
                     self.fill_jet_histograms(jet_level, j, f"{jetR_str}Scaled")
 
     #---------------------------------------------------------------
     # Form EEC using jet constituents
     #---------------------------------------------------------------
     def fill_jet_histograms(self, level, jet, R_label):
-        self.jetpT.Fill(jet.perp())
         # leading track selection
         if self.leading_jet_const_pT > 0:
             constituents = fj.sorted_by_pt(jet.constituents())
@@ -310,9 +305,9 @@ class PythiaGenENC(process_base.ProcessBase):
 
         for ipoint in range(2, self.npoint+1):
             for index in range(cb0.correlator(ipoint).rs().size()):
-                    getattr(self, f'h_ENC{ipoint}_JetPt_{level}_R{R_label}_trk00').Fill(jet.perp(), cb0.correlator(ipoint).rs()[index], cb0.correlator(ipoint).weights()[index])
+                    getattr(self, f'h_ENC{ipoint}TR_JetPt_{level}_R{R_label}_trk00').Fill(jet.perp(), cb0.correlator(ipoint).rs()[index], cb0.correlator(ipoint).weights()[index])
             for index in range(cb1.correlator(ipoint).rs().size()):
-                    getattr(self, f'h_ENC{ipoint}_JetPt_{level}_R{R_label}_trk10').Fill(jet.perp(), cb1.correlator(ipoint).rs()[index], cb1.correlator(ipoint).weights()[index])
+                    getattr(self, f'h_ENC{ipoint}TR_JetPt_{level}_R{R_label}_trk10').Fill(jet.perp(), cb1.correlator(ipoint).rs()[index], cb1.correlator(ipoint).weights()[index])
             
         # if analyzing charged jet, separare different charge combinations
         if level == "ch":
@@ -321,14 +316,23 @@ class PythiaGenENC(process_base.ProcessBase):
                 for index in range(cb1.correlator(ipoint).rs().size()):
                     part1 = int(cb1.correlator(ipoint).indices1()[index])
                     part2 = int(cb1.correlator(ipoint).indices2()[index])
-                    c1 = _c_select1[part1]
-                    c2 = _c_select1[part2]
-                    if pythiafjext.getPythia8Particle(c1).charge()*pythiafjext.getPythia8Particle(c2).charge() < 0:
-                        # print("unlike-sign pair ",pythiafjext.getPythia8Particle(c1).id(),pythiafjext.getPythia8Particle(c2).id())
-                        getattr(self, f'h_ENC{ipoint}_JetPt_{level}_R{R_label}_unlike_trk10').Fill(jet.perp(), cb1.correlator(ipoint).rs()[index], cb1.correlator(ipoint).weights()[index])
-                    else:
-                        # print("likesign pair ",pythiafjext.getPythia8Particle(c1).id(),pythiafjext.getPythia8Particle(c2).id())
-                        getattr(self, f'h_ENC{ipoint}_JetPt_{level}_R{R_label}_like_trk10').Fill(jet.perp(), cb1.correlator(ipoint).rs()[index], cb1.correlator(ipoint).weights()[index])
+                    c1 = pythiafjext.getPythia8Particle(_c_select1[part1]).charge()
+                    c2 = pythiafjext.getPythia8Particle(_c_select1[part2]).charge()
+                    if c1 > 0 and c2 > 0:
+                        getattr(self, f'h_ENC{ipoint}PP_JetPt_{level}_R{R_label}_trk10').Fill(jet.perp(), cb1.correlator(ipoint).rs()[index], cb1.correlator(ipoint).weights()[index])
+                    elif c1 < 0 and c2 < 0:
+                        getattr(self, f'h_ENC{ipoint}MM_JetPt_{level}_R{R_label}_trk10').Fill(jet.perp(), cb1.correlator(ipoint).rs()[index], cb1.correlator(ipoint).weights()[index])
+                    else: # one is positive, one is negative
+                        getattr(self, f'h_ENC{ipoint}PM_JetPt_{level}_R{R_label}_trk10').Fill(jet.perp(), cb1.correlator(ipoint).rs()[index], cb1.correlator(ipoint).weights()[index])
+                    
+                    getattr(self, f'h_ENC{ipoint}QQ_JetPt_{level}_R{R_label}_trk10').Fill(jet.perp(), cb1.correlator(ipoint).rs()[index], c1 * c2 * cb1.correlator(ipoint).weights()[index])
+
+                    # if pythiafjext.getPythia8Particle(c1).charge()*pythiafjext.getPythia8Particle(c2).charge() < 0:
+                    #     # print("unlike-sign pair ",pythiafjext.getPythia8Particle(c1).id(),pythiafjext.getPythia8Particle(c2).id())
+                    #     getattr(self, f'h_ENC{ipoint}_JetPt_{level}_R{R_label}_unlike_trk10').Fill(jet.perp(), cb1.correlator(ipoint).rs()[index], cb1.correlator(ipoint).weights()[index])
+                    # else:
+                    #     # print("likesign pair ",pythiafjext.getPythia8Particle(c1).id(),pythiafjext.getPythia8Particle(c2).id())
+                    #     getattr(self, f'h_ENC{ipoint}_JetPt_{level}_R{R_label}_like_trk10').Fill(jet.perp(), cb1.correlator(ipoint).rs()[index], cb1.correlator(ipoint).weights()[index])
 
         getattr(self, f'h_Nconst_JetPt_{level}_R{R_label}_trk00').Fill(jet.perp(), len(_c_select0))
         getattr(self, f'h_Nconst_JetPt_{level}_R{R_label}_trk10').Fill(jet.perp(), len(_c_select1))
