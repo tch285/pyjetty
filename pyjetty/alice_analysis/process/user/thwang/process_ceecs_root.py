@@ -2,46 +2,30 @@
 
 from __future__ import print_function
 
-import fastjet as fj
-import fjcontrib
-import fjext
-
-import ROOT
-
-import yaml
-import argparse
-import os
-import numpy as np
-import sys
-
-from pyjetty.mputils import *
-
-from heppy.pythiautils import configuration as pyconf
 import pythia8
 import pythiafjext
 import pythiaext
+import fastjet as fj
+import fjcontrib
+import fjext
+import os
+import sys
+import yaml
+import ROOT
+import argparse
+import numpy as np
 import ecorrel
 
+from pyjetty.mputils import *
+from heppy.pythiautils import configuration as pyconf
 from pyjetty.alice_analysis.process.base import process_base
-
 import cEEC_utils.gen_utils as gutils
-
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
 # Automatically set Sumw2 when creating new histograms
 ROOT.TH1.SetDefaultSumw2()
 ROOT.TH2.SetDefaultSumw2()
-
-def linbins(xmin, xmax, nbins):
-  arr = np.linspace(xmin, xmax, nbins+1)
-#   arr = array.array('f', lspace)
-  return arr
-
-def logbins(xmin, xmax, nbins):
-  arr = np.logspace(np.log10(xmin), np.log10(xmax), nbins+1)
-#   arr = array.array('f', lspace)
-  return arr
 
 ################################################################
 class PythiaGenENC(process_base.ProcessBase):
@@ -64,7 +48,7 @@ class PythiaGenENC(process_base.ProcessBase):
             os.makedirs(self.output_dir)
 
         self.jet_levels = config["jet_levels"] # levels = ["p", "h", "ch"]
-        self.jetR_list = config["jetR"]
+        self.jetRs = config["jetR"]
         self.RL_min, self.RL_max, self.RL_nbins = config["RL_binning"]
         self.pT_min, self.pT_max, self.pT_nbins = config["pT_binning"]
         self.Nconst_min, self.Nconst_max, self.Nconst_nbins = config["Nconst_binning"]
@@ -88,40 +72,35 @@ class PythiaGenENC(process_base.ProcessBase):
     #---------------------------------------------------------------
     # Main processing function
     #---------------------------------------------------------------
-    def pythia_parton_hadron(self, args):
- 
+    def generate(self, args):
         # Create ROOT TTree file for storing raw PYTHIA particle information
         outf_path = os.path.join(self.output_dir, args.tree_output_fname)
         outf = ROOT.TFile(outf_path, 'recreate')
         outf.cd()
 
-        mycfg = []
-        mycfg.append("HadronLevel:all=off") # Turning off hadronization
+        mycfg = ["HadronLevel:all=off"] # Turning off hadronization
         pythia = pyconf.create_and_init_pythia_from_args(args, mycfg)
 
         # Initialize response histograms
-        self.initialize_hist()
+        self.prepare()
 
         # print the banner first
         fj.ClusterSequence.print_banner()
         print()
 
-        self.init_jet_tools()
-        self.calculate_events(pythia)
+        self.simulate(pythia)
         pythia.stat()
         print()
         
-        self.scale_print_final_info(pythia)
+        self.finalize(pythia)
 
         outf.Write()
         outf.Close()
 
-        self.save_output_objects()
-
     #---------------------------------------------------------------
-    # Initialize histograms
+    # Prepare for simulation (initializing histograms, creating jet defs and selectors)
     #---------------------------------------------------------------
-    def initialize_hist(self):
+    def prepare(self):
         pt_bins, _ = gutils.linbins(self.pT_min, self.pT_max, self.pT_nbins)
         RL_bins, _, _, _, _ = gutils.logbins(self.RL_min, self.RL_max, self.RL_nbins)
         Nconst_bins, _ = gutils.linbins(self.Nconst_min, self.Nconst_max, self.Nconst_nbins)
@@ -138,7 +117,7 @@ class PythiaGenENC(process_base.ProcessBase):
             self.hists['ENC'][jet_level] = {}
             self.hists['jetpT'][jet_level] = {}
             self.hists['Nconst'][jet_level] = {}
-            for jetR in self.jetR_list:
+            for jetR in self.jetRs:
                 R_label = str(jetR).replace('.', '') + '_sc'
                 self.hists['jetpT'][jet_level][jetR] = ROOT.TH1D(f"h_jetpT_{jet_level}_R{R_label}", 'jet p_{T} distribution;jet p_{T} (GeV);Counts', self.pT_nbins, pt_bins)
                 self.hists['Nconst'][jet_level][jetR] = ROOT.TH2D(f'h_Nconst_jetpT_{jet_level}_R{R_label}_1', f"Jet constituents;jet pT (GeV);Nconst", self.pT_nbins, pt_bins, self.Nconst_nbins, Nconst_bins)
@@ -146,15 +125,14 @@ class PythiaGenENC(process_base.ProcessBase):
                 for cEEC_type in gutils.cEEC_types:
                     self.hists['ENC'][jet_level][jetR][cEEC_type] = {}
                     for ipoint in range(2, self.npoint + 1):
-                        self.hists['ENC'][jet_level][jetR][cEEC_type][ipoint] = ROOT.TH2D(f'h_ENC{ipoint}{cEEC_type}_jetpT_{jet_level}_R{R_label}_1', f'ENC{ipoint}{cEEC_type};jet p_{{T}} (GeV);R_{{L}}', self.pT_nbins, pt_bins, self.RL_nbins, RL_bins)
+                        if ipoint == 2 and cEEC_type == "PM":
+                            continue
+                        else:
+                            self.hists['ENC'][jet_level][jetR][cEEC_type][ipoint] = ROOT.TH2D(f'h_ENC{ipoint}{cEEC_type}_jetpT_{jet_level}_R{R_label}_1', f'ENC{ipoint}{cEEC_type};jet p_{{T}} (GeV);R_{{L}}', self.pT_nbins, pt_bins, self.RL_nbins, RL_bins)
 
-    #---------------------------------------------------------------
-    # Initiate jet defs, selectors, and sd (if required)
-    #---------------------------------------------------------------
-    def init_jet_tools(self):
         self.jet_def = {}
         self.jet_selector = {}
-        for jetR in self.jetR_list:
+        for jetR in self.jetRs:
             # set up our jet definition and a jet selector
             jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
             self.jet_def[jetR] = jet_def
@@ -163,16 +141,14 @@ class PythiaGenENC(process_base.ProcessBase):
             self.jet_selector[jetR] = jet_selector
             print(jet_def)
 
-        # pwarning('max eta for particles after hadronization set to', self.max_eta_hadron)
         self.det_track_selector = fj.SelectorPtMin(self.min_det_trk_pT)
-
         self.jet_track_selector = fj.SelectorPtMin(self.min_jet_trk_pT)
 
     #---------------------------------------------------------------
     # Calculate events and pass information on to jet finding
     #---------------------------------------------------------------
-    def calculate_events(self, pythia):      
-        iev = 0  # Event loop count
+    def simulate(self, pythia):
+        iev = 0
         while iev < self.nev:
             if iev % 100 == 0:
                 print('ievt',iev)
@@ -197,15 +173,15 @@ class PythiaGenENC(process_base.ProcessBase):
             # Some "accepted" events don't survive hadronization step -- keep track here
             self.hNevents.Fill(0)
 
-            self.find_jets_fill_trees()
+            self.collect_ENC_data()
             iev += 1
 
     #---------------------------------------------------------------
     # Find jets, do matching between levels, and fill histograms & trees
     #---------------------------------------------------------------
-    def find_jets_fill_trees(self):
+    def collect_ENC_data(self):
         # Loop over jet radii
-        for jetR in self.jetR_list:
+        for jetR in self.jetRs:
             jet_selector = self.jet_selector[jetR]
             jet_def = self.jet_def[jetR]
 
@@ -228,12 +204,12 @@ class PythiaGenENC(process_base.ProcessBase):
                 # loop over jets and fill EEC histograms with jet constituents
                 for j in jets:
                     target_jetpT_hist.Fill(j.perp())
-                    self.fill_jet_histograms(jet_level, j, jetR)
+                    self._fill_hists(jet_level, j, jetR)
 
     #---------------------------------------------------------------
-    # Form EEC using jet constituents
+    # Calculate ENCs using jet constituents
     #---------------------------------------------------------------
-    def fill_jet_histograms(self, jet_level, jet, jetR):
+    def _fill_hists(self, jet_level, jet, jetR):
         # ignore jet if constituents are all below cutoff
         if self.leading_jet_const_pT > 0:
             constituents = fj.sorted_by_pt(jet.constituents())
@@ -251,14 +227,14 @@ class PythiaGenENC(process_base.ProcessBase):
         # cb0 = ecorrel.CorrelatorBuilder(_c_select0, jet.perp(), self.npoint, self.npower, self.dphi_cut, self.deta_cut)
 
         # select constituents with 1 GeV cut
-        _c_select1 = fj.vectorPJ()
+        jet_const = fj.vectorPJ()
         for c in self.jet_track_selector(jet.constituents()):
             if self.do_theory_check:
                 if pythiafjext.getPythia8Particle(c).charge()!=0:
-                    _c_select1.push_back(c)
+                    jet_const.push_back(c)
             else:
-                _c_select1.push_back(c)
-        cb1 = ecorrel.CorrelatorBuilder(_c_select1, jet.perp(), self.npoint, self.npower, self.dphi_cut, self.deta_cut)
+                jet_const.push_back(c)
+        cb1 = ecorrel.CorrelatorBuilder(jet_const, jet.perp(), self.npoint, self.npower, self.dphi_cut, self.deta_cut)
 
         for ipoint in range(2, self.npoint+1):
             # for index in range(cb0.correlator(ipoint).rs().size()):
@@ -266,15 +242,14 @@ class PythiaGenENC(process_base.ProcessBase):
             for index in range(cb1.correlator(ipoint).rs().size()):
                 self.hists['ENC'][jet_level][jetR]['TR'][ipoint].Fill(jet.perp(), cb1.correlator(ipoint).rs()[index], cb1.correlator(ipoint).weights()[index])
             
-        # if analyzing charged jet, separate different charge combinations
         if jet_level == "ch":
             for ipoint in range(2, self.npoint+1):
                 # only fill trk pt > 1 GeV here for now
                 for index in range(cb1.correlator(ipoint).rs().size()):
                     part1 = int(cb1.correlator(ipoint).indices1()[index])
                     part2 = int(cb1.correlator(ipoint).indices2()[index])
-                    c1 = pythiafjext.getPythia8Particle(_c_select1[part1]).charge()
-                    c2 = pythiafjext.getPythia8Particle(_c_select1[part2]).charge()
+                    c1 = pythiafjext.getPythia8Particle(jet_const[part1]).charge()
+                    c2 = pythiafjext.getPythia8Particle(jet_const[part2]).charge()
                     if c1 > 0 and c2 > 0: # both positively charged
                         self.hists['ENC'][jet_level][jetR]['PP'][ipoint].Fill(jet.perp(), cb1.correlator(ipoint).rs()[index], cb1.correlator(ipoint).weights()[index])
                     elif c1 < 0 and c2 < 0: # both negatively charged
@@ -284,12 +259,12 @@ class PythiaGenENC(process_base.ProcessBase):
                     
                     self.hists['ENC'][jet_level][jetR]['QQ'][ipoint].Fill(jet.perp(), cb1.correlator(ipoint).rs()[index], c1 * c2 * cb1.correlator(ipoint).weights()[index])
 
-        self.hists['Nconst'][jet_level][jetR].Fill(jet.perp(), len(_c_select1))
+        self.hists['Nconst'][jet_level][jetR].Fill(jet.perp(), len(jet_const))
        
     #---------------------------------------------------------------
-    # Initiate scaling of all histograms and print final simulation info
+    # Scale of all histograms and print final simulation info
     #---------------------------------------------------------------
-    def scale_print_final_info(self, pythia):
+    def finalize(self, pythia):
         # Scale all jet histograms by the appropriate factor from generated cross section and the number of accepted events
         scale_f = pythia.info.sigmaGen() / self.hNevents.GetBinContent(1)
         print(f"Scaling factor (sigma/nev) = {scale_f}")
@@ -330,4 +305,4 @@ if __name__ == '__main__':
         args.nev = 1
 
     process = PythiaGenENC(config_file=args.config_file, output_dir=args.output_dir, args=args)
-    process.pythia_parton_hadron(args)
+    process.generate(args)
