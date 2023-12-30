@@ -9,9 +9,10 @@ namespace EnergyCorrelators
 	{
 		public:
 			CorrelatorsContainer();
+			CorrelatorsContainer(const int &ipt, const int &nparts, const int &ngroups);
 			virtual ~CorrelatorsContainer();
-			void addwr(const double &w, const double &r);
-			void addwr(const double &w, const double &r, const double &indx1, const double &indx2);
+			void addwr(const int &igroup, const double &w, const double &r);
+			void addwr(const int &igroup, const double &w, const double &r, const double &indx1, const double &indx2);
 			void clear();
 			void PrintLists();
 			std::vector<double> *weights();
@@ -20,6 +21,7 @@ namespace EnergyCorrelators
 			// have to use double instead of int or there will be errors later when accessing the indices
 			std::vector<double> *indices1(); // indices of object 1 in the pair
 			std::vector<double> *indices2(); // indices of object 2 in the pair
+			std::vector<std::vector<double>> *indices();
 
 			const double *wa();
 			const double *ra();
@@ -30,6 +32,9 @@ namespace EnergyCorrelators
 			std::vector<double> frxw;
 			std::vector<double> findx1;
 			std::vector<double> findx2;
+			std::vector<std::vector<double>> fidx;
+			std::vector<std::vector<double>> fq;
+			std::vector<double> fqprod;
 	};
 
 	class CorrelatorBuilder
