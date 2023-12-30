@@ -125,7 +125,7 @@ class PythiaGenENC(process_base.ProcessBase):
                 for cEEC_type in gutils.cEEC_types:
                     self.hists['ENC'][jet_level][jetR][cEEC_type] = {}
                     for ipoint in range(2, self.npoint + 1):
-                        if ipoint == 2 and cEEC_type == "PM":
+                        if ipoint > 2 and cEEC_type == "PM":
                             continue
                         else:
                             self.hists['ENC'][jet_level][jetR][cEEC_type][ipoint] = ROOT.TH2D(f'h_ENC{ipoint}{cEEC_type}_jetpT_{jet_level}_R{R_label}_1', f'ENC{ipoint}{cEEC_type};jet p_{{T}} (GeV);R_{{L}}', self.pT_nbins, pt_bins, self.RL_nbins, RL_bins)
@@ -235,30 +235,28 @@ class PythiaGenENC(process_base.ProcessBase):
             else:
                 jet_const.push_back(c)
         cb1 = ecorrel.CorrelatorBuilder(jet_const, jet.perp(), self.npoint, self.npower, self.dphi_cut, self.deta_cut)
-
         for ipoint in range(2, self.npoint+1):
             # for index in range(cb0.correlator(ipoint).rs().size()):
                 # getattr(self, f'h_ENC{ipoint}TR_JetPt_{level}_R{R_label}_trk00').Fill(jet.perp(), cb0.correlator(ipoint).rs()[index], cb0.correlator(ipoint).weights()[index])
             for index in range(cb1.correlator(ipoint).rs().size()):
                 self.hists['ENC'][jet_level][jetR]['TR'][ipoint].Fill(jet.perp(), cb1.correlator(ipoint).rs()[index], cb1.correlator(ipoint).weights()[index])
-            
+        
         if jet_level == "ch":
             for ipoint in range(2, self.npoint+1):
                 # only fill trk pt > 1 GeV here for now
-                for index in range(cb1.correlator(ipoint).rs().size()):
-                    part1 = int(cb1.correlator(ipoint).indices1()[index])
-                    part2 = int(cb1.correlator(ipoint).indices2()[index])
-                    c1 = pythiafjext.getPythia8Particle(jet_const[part1]).charge()
-                    c2 = pythiafjext.getPythia8Particle(jet_const[part2]).charge()
-                    if c1 > 0 and c2 > 0: # both positively charged
-                        self.hists['ENC'][jet_level][jetR]['PP'][ipoint].Fill(jet.perp(), cb1.correlator(ipoint).rs()[index], cb1.correlator(ipoint).weights()[index])
-                    elif c1 < 0 and c2 < 0: # both negatively charged
-                        self.hists['ENC'][jet_level][jetR]['MM'][ipoint].Fill(jet.perp(), cb1.correlator(ipoint).rs()[index], cb1.correlator(ipoint).weights()[index])
-                    else: # one is positive, one is negative
-                        self.hists['ENC'][jet_level][jetR]['PM'][ipoint].Fill(jet.perp(), cb1.correlator(ipoint).rs()[index], cb1.correlator(ipoint).weights()[index])
-                    
-                    self.hists['ENC'][jet_level][jetR]['QQ'][ipoint].Fill(jet.perp(), cb1.correlator(ipoint).rs()[index], c1 * c2 * cb1.correlator(ipoint).weights()[index])
-
+                for indices, RL, weight in zip(cb1.correlator(ipoint).indices(), cb1.correlator(ipoint).rs(), cb1.correlator(ipoint).weights()):
+                    charges = np.empty(ipoint, np.int8) # NOTE:? dtype might cause issues later
+                    for i in range(ipoint):
+                        part_idx = int(indices[i])
+                        charges[i] = pythiafjext.getPythia8Particle(jet_const[part_idx]).charge()
+                    if np.all(charges > 0):
+                        self.hists['ENC'][jet_level][jetR]['PP'][ipoint].Fill(jet.perp(), RL, weight)
+                    elif np.all(charges < 0):
+                        self.hists['ENC'][jet_level][jetR]['MM'][ipoint].Fill(jet.perp(), RL, weight)
+                    else:
+                        if ipoint == 2:
+                            self.hists['ENC'][jet_level][jetR]['PM'][ipoint].Fill(jet.perp(), RL, weight)
+                    self.hists['ENC'][jet_level][jetR]['QQ'][ipoint].Fill(jet.perp(), RL, np.prod(charges) * weight)
         self.hists['Nconst'][jet_level][jetR].Fill(jet.perp(), len(jet_const))
        
     #---------------------------------------------------------------

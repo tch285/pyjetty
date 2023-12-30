@@ -7,5 +7,11 @@
 	#define SWIG
 	#include "ecorrel.hh"
 %}
-
+%template(DoubleVectorVector) std::vector<std::vector<double>>;
+%{
+	#define SWIG_FILE_WITH_INIT
+ 	#include <fastjet/PseudoJet.hh>
+	#define SWIG
+	#include "ecorrel.hh"
+%}
 %include "ecorrel.hh" 
