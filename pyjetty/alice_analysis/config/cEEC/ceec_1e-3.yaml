@@ -24,5 +24,5 @@ part_levels: ['p', 'h', 'ch']
 RL_binning: [1.0E-3, 1, 50] # the period is important as otherwise PyYAML will read it as a string
 pT_binning: [0, 200, 200]
 Nconst_binning: [0, 50, 50]
-npoint: 2
+npoint: 3
 npower: 1

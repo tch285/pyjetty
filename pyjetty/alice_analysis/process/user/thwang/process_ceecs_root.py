@@ -2,14 +2,13 @@
 
 from __future__ import print_function
 
-import pythia8
+# import pythia8
 import pythiafjext
-import pythiaext
+# import pythiaext
 import fastjet as fj
-import fjcontrib
-import fjext
+# import fjcontrib
+# import fjext
 import os
-import sys
 import yaml
 import ROOT
 import argparse
@@ -125,7 +124,7 @@ class PythiaGenENC(process_base.ProcessBase):
                 for cEEC_type in gutils.cEEC_types:
                     self.hists['ENC'][jet_level][jetR][cEEC_type] = {}
                     for ipoint in range(2, self.npoint + 1):
-                        if ipoint > 2 and cEEC_type == "PM":
+                        if cEEC_type == "PM" and ipoint > 2:
                             continue
                         else:
                             self.hists['ENC'][jet_level][jetR][cEEC_type][ipoint] = ROOT.TH2D(f'h_ENC{ipoint}{cEEC_type}_jetpT_{jet_level}_R{R_label}_1', f'ENC{ipoint}{cEEC_type};jet p_{{T}} (GeV);R_{{L}}', self.pT_nbins, pt_bins, self.RL_nbins, RL_bins)
@@ -250,13 +249,13 @@ class PythiaGenENC(process_base.ProcessBase):
                         part_idx = int(indices[i])
                         charges[i] = pythiafjext.getPythia8Particle(jet_const[part_idx]).charge()
                     if np.all(charges > 0):
-                        self.hists['ENC'][jet_level][jetR]['PP'][ipoint].Fill(jet.perp(), RL, weight)
+                        self.hists['ENC'][jet_level][jetR]['P'][ipoint].Fill(jet.perp(), RL, weight)
                     elif np.all(charges < 0):
-                        self.hists['ENC'][jet_level][jetR]['MM'][ipoint].Fill(jet.perp(), RL, weight)
+                        self.hists['ENC'][jet_level][jetR]['M'][ipoint].Fill(jet.perp(), RL, weight)
                     else:
                         if ipoint == 2:
                             self.hists['ENC'][jet_level][jetR]['PM'][ipoint].Fill(jet.perp(), RL, weight)
-                    self.hists['ENC'][jet_level][jetR]['QQ'][ipoint].Fill(jet.perp(), RL, np.prod(charges) * weight)
+                    self.hists['ENC'][jet_level][jetR]['Q'][ipoint].Fill(jet.perp(), RL, np.prod(charges) * weight)
         self.hists['Nconst'][jet_level][jetR].Fill(jet.perp(), len(jet_const))
        
     #---------------------------------------------------------------
