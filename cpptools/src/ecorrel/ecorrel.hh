@@ -12,16 +12,16 @@ namespace EnergyCorrelators
 			CorrelatorsContainer(const int &ipt, const int &nparts, const int &ngroups);
 			virtual ~CorrelatorsContainer();
 			void addwr(const int &igroup, const double &w, const double &r);
-			void addwr(const int &igroup, const double &w, const double &r, const double &indx1, const double &indx2);
+			void addwr(const int &igroup, const double &w, const double &r, const int &indx1, const int &indx2);
 			void clear();
 			void PrintLists();
 			std::vector<double> *weights();
 			std::vector<double> *rs(); // return the pointer to the list of pair distances
 			std::vector<double> *rxw();
 			// have to use double instead of int or there will be errors later when accessing the indices
-			std::vector<double> *indices1(); // indices of object 1 in the pair
-			std::vector<double> *indices2(); // indices of object 2 in the pair
-			std::vector<std::vector<double>> *indices();
+			std::vector<int> *indices1(); // indices of object 1 in the pair
+			std::vector<int> *indices2(); // indices of object 2 in the pair
+			std::vector<std::vector<int>> *indices();
 
 			const double *wa();
 			const double *ra();
@@ -29,12 +29,12 @@ namespace EnergyCorrelators
 		private:
 			std::vector<double> fr; // list of pair distances
 			std::vector<double> fw; // list of pair weights
-			std::vector<double> frxw;
-			std::vector<double> findx1;
-			std::vector<double> findx2;
-			std::vector<std::vector<double>> fidx;
-			std::vector<std::vector<double>> fq;
-			std::vector<double> fqprod;
+			std::vector<double> frxw; // list of pair weights * distances
+			std::vector<int> findx1; // list of indices of first contributing parton
+			std::vector<int> findx2; // list of indices of second contributing parton
+			std::vector<std::vector<int>> fidx; // list of all parton index combinations
+			std::vector<std::vector<int>> fq; // list of charges of partons in each combination, currently unimplemented
+			std::vector<int> fqprod; // list of charge products for each combination, curnrelty unimplemented
 	};
 
 	class CorrelatorBuilder

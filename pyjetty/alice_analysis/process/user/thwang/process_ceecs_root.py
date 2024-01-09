@@ -246,8 +246,7 @@ class PythiaGenENC(process_base.ProcessBase):
                 for indices, RL, weight in zip(cb1.correlator(ipoint).indices(), cb1.correlator(ipoint).rs(), cb1.correlator(ipoint).weights()):
                     charges = np.empty(ipoint, np.int8) # NOTE:? dtype might cause issues later
                     for i in range(ipoint):
-                        part_idx = int(indices[i])
-                        charges[i] = pythiafjext.getPythia8Particle(jet_const[part_idx]).charge()
+                        charges[i] = pythiafjext.getPythia8Particle(jet_const[indices[i]]).charge()
                     if np.all(charges > 0):
                         self.hists['ENC'][jet_level][jetR]['P'][ipoint].Fill(jet.perp(), RL, weight)
                     elif np.all(charges < 0):

@@ -22,8 +22,8 @@ namespace EnergyCorrelators
     , frxw(ngroups)
     , findx1(ngroups)
     , findx2(ngroups)
-    , fidx(ngroups, std::vector<double> (ipoint))
-    , fq(ngroups, std::vector<double> (ipoint))
+    , fidx(ngroups, std::vector<int> (ipoint))
+    , fq(ngroups, std::vector<int> (ipoint))
     , fqprod(ngroups)
     {
         // permutations WITH replacement
@@ -37,8 +37,7 @@ namespace EnergyCorrelators
         //     }
         // }
 
-        // WITHOUT replacement: FIXME: not sure if this actually works if ngroups is set to zero.  will it break?
-        // original test code throws segfault (obviously)
+        // combinations WITHOUT replacement:
         if (ngroups > 0) {
             std::string bitmask(ipoint, 1); // ipoint leading 1's
             bitmask.resize(nparts, 0); // nparts - ipoint trailing 0's
@@ -57,7 +56,7 @@ namespace EnergyCorrelators
             } while (std::prev_permutation(bitmask.begin(), bitmask.end()));
         }
 
-        // WITH replacement:
+        // combinations WITH replacement:
         // std::string bitmask(ipoint, 1); // ipoint leading 1's
         // bitmask.resize(nparts + ipoint - 1, 0); // nparts - ipoint trailing 0's
         // int group_idx{0}, part_idx{0}, bit_idx{0}, focus_idx{0};
@@ -95,7 +94,7 @@ namespace EnergyCorrelators
         fr[igroup] = r;
     }
 
-    void CorrelatorsContainer::addwr(const int &igroup, const double &w, const double &r, const double &indx1, const double &indx2)
+    void CorrelatorsContainer::addwr(const int &igroup, const double &w, const double &r, const int &indx1, const int &indx2)
     {
         fw[igroup] = w;
         fr[igroup] = r;
@@ -113,17 +112,17 @@ namespace EnergyCorrelators
         return &fr;
     }
 
-    std::vector<double> *CorrelatorsContainer::indices1()
+    std::vector<int> *CorrelatorsContainer::indices1()
     {
         return &findx1;
     }
 
-    std::vector<double> *CorrelatorsContainer::indices2()
+    std::vector<int> *CorrelatorsContainer::indices2()
     {
         return &findx2;
     }
 
-    std::vector<std::vector<double>> *CorrelatorsContainer::indices()
+    std::vector<std::vector<int>> *CorrelatorsContainer::indices()
     {
         return &fidx;
     }
@@ -198,7 +197,7 @@ namespace EnergyCorrelators
             fec[ipoint - 2] = new CorrelatorsContainer(ipoint, parts.size(), ngroups);
             for (int igroup = 0; igroup < ngroups; igroup++) { // cycle through each group
                 _max_deltaR = -1;
-                auto idxs_group = fec[ipoint - 2]->indices()->at(igroup);
+                auto idxs_group = fec[ipoint - 2]->indices()->operator[](igroup);
                 for (int i = 0; i < ipoint - 1; i++) { // cycle through pairs of each group to find max RL
                     idx_i = idxs_group[i];
                     for (int j = i + 1; j < ipoint; j++) {
@@ -225,11 +224,11 @@ namespace EnergyCorrelators
                     }
                 }
                 _w2 = 1 / std::pow(scale, ipoint);
-                for (auto &grpidx : fec[ipoint - 2]->indices()->at(igroup)) {
+                for (auto &grpidx : idxs_group) {
                     _w2 *= parts[grpidx].perp();
                 }
                 _w2 = pow(_w2, power);
-                fec[ipoint - 2]->addwr(igroup, _w2, _max_deltaR, (double)(max_idx_i), (double)(max_idx_j)); // save weight, distance and contributing indices of the pair
+                fec[ipoint - 2]->addwr(igroup, _w2, _max_deltaR, max_idx_i, max_idx_j); // save weight, distance and contributing indices of the pair
             }
         }
 
@@ -351,7 +350,7 @@ namespace EnergyCorrelators
 
     bool CorrelatorBuilder::ApplyDeltaEtaRejection(const double deta_cut, const double eta12)
     {
-        if ( fabs(eta12)<deta_cut ) return false;
+        if ( fabs(eta12) < deta_cut ) return false;
         return true;
     }
 
