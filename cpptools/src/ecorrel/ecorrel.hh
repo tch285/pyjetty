@@ -48,6 +48,7 @@ namespace EnergyCorrelators
 
 			bool ApplyDeltaPhiRejection(const double dphi_cut, const double q1, const double q2, const double pt1, const double pt2, const double phi12);
 			bool ApplyDeltaEtaRejection(const double deta_cut, const double eta12);
+			int calcGroups(int, int);
 
 		private:
 			int fncmax;

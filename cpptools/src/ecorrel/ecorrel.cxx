@@ -2,7 +2,6 @@
 #include <cmath>
 #include <stdexcept>
 #include <iostream>
-#include <boost/math/special_functions/factorials.hpp>
 #include <fastjet/Selector.hh>
 
 namespace EnergyCorrelators
@@ -29,32 +28,34 @@ namespace EnergyCorrelators
     {
         // permutations WITH replacement
         // int max = std::pow(nparts, ipoint);
-        for (int igroup = 1; igroup < ngroups; igroup++) {
-            int remainder{igroup};
-            for (int i = ipoint - 1; i >= 0; i--) {
-                // cout << remainder % nparts << endl;
-                fidx[igroup][i] = remainder % nparts;
-                remainder /= nparts;
-            }
-        }
+        // for (int igroup = 1; igroup < ngroups; igroup++) {
+        //     int remainder{igroup};
+        //     for (int i = ipoint - 1; i >= 0; i--) {
+        //         // cout << remainder % nparts << endl;
+        //         fidx[igroup][i] = remainder % nparts;
+        //         remainder /= nparts;
+        //     }
+        // }
 
         // WITHOUT replacement: FIXME: not sure if this actually works if ngroups is set to zero.  will it break?
         // original test code throws segfault (obviously)
-        // std::string bitmask(ipoint, 1); // ipoint leading 1's
-        // bitmask.resize(nparts, 0); // nparts - ipoint trailing 0's
-        // int group_idx{0}, part_idx{0}, bit_idx{0};
+        if (ngroups > 0) {
+            std::string bitmask(ipoint, 1); // ipoint leading 1's
+            bitmask.resize(nparts, 0); // nparts - ipoint trailing 0's
+            int group_idx{0}, part_idx{0}, bit_idx{0};
 
-        // do {
-        //     while (part_idx < ipoint) {
-        //         if (bitmask[bit_idx]) {
-        //             fidx[group_idx][part_idx] = bit_idx;
-        //             part_idx++;
-        //         }
-        //         bit_idx++;
-        //     }
-        //     group_idx++;
-        //     part_idx = bit_idx = 0;
-        // } while (std::prev_permutation(bitmask.begin(), bitmask.end()));
+            do {
+                while (part_idx < ipoint) {
+                    if (bitmask[bit_idx]) {
+                        fidx[group_idx][part_idx] = bit_idx;
+                        part_idx++;
+                    }
+                    bit_idx++;
+                }
+                group_idx++;
+                part_idx = bit_idx = 0;
+            } while (std::prev_permutation(bitmask.begin(), bitmask.end()));
+        }
 
         // WITH replacement:
         // std::string bitmask(ipoint, 1); // ipoint leading 1's
@@ -139,7 +140,7 @@ namespace EnergyCorrelators
 
     std::vector<double> *CorrelatorsContainer::rxw()
     {
-        // frxw.clear();
+        // frxw.clear(); // no longer needed since vector size is pre-allocated
         for (size_t i = 0; i < fr.size(); i++)
         {
             frxw[i] = fr[i] * fw[i];
@@ -191,17 +192,8 @@ namespace EnergyCorrelators
             throw std::overflow_error("asking for n-point correlator with n < 2?");
         }
         for (int ipoint = 2; ipoint <= fncmax; ipoint++) {
-            // need this calcualtion of ngroups outside creation of CorrelatorsContainer to properly size fidx
-            // permutations WITH replacement:
-            ngroups = std::pow(nparts, ipoint);
-
-            // if counting WITHOUT replacement: 
-            // if (nparts < ipoint) ngroups = 0;
-            // else {
-            //     ngroups = (boost::math::factorial<double>(nparts)) / (boost::math::factorial<double>(nparts - ipoint) * boost::math::factorial<double>(ipoint));;
-            // }
-            // if counting WITH replacement:
-            // ngroups = (boost::math::factorial<double>(nparts + ipoint - 1)) / (boost::math::factorial<double>(ipoint) * boost::math::factorial<double>(nparts - 1));;
+            // need this calculation of ngroups outside creation of CorrelatorsContainer to properly size fidx
+            ngroups = calcGroups(nparts, ipoint);
 
             fec[ipoint - 2] = new CorrelatorsContainer(ipoint, parts.size(), ngroups);
             for (int igroup = 0; igroup < ngroups; igroup++) { // cycle through each group
@@ -234,13 +226,10 @@ namespace EnergyCorrelators
                 }
                 _w2 = 1 / std::pow(scale, ipoint);
                 for (auto &grpidx : fec[ipoint - 2]->indices()->at(igroup)) {
-                    // std::cout << grpidx << "|";
                     _w2 *= parts[grpidx].perp();
                 }
                 _w2 = pow(_w2, power);
-                // std::cout << " |" << max_idx_i << "|" << max_idx_j << "| |";
-                // std::cout << _max_deltaR << "|" << _w2 << std::endl;
-                fec[ipoint - 2]->addwr(igroup, _w2, _max_deltaR, (double)(max_idx_i), (double)(max_idx_j)); // save weight, distance and indices of the pair
+                fec[ipoint - 2]->addwr(igroup, _w2, _max_deltaR, (double)(max_idx_i), (double)(max_idx_j)); // save weight, distance and contributing indices of the pair
             }
         }
 
@@ -364,6 +353,33 @@ namespace EnergyCorrelators
     {
         if ( fabs(eta12)<deta_cut ) return false;
         return true;
+    }
+
+    int CorrelatorBuilder::calcGroups(int nparts, int ipoint)
+    { // pass nparts and ipoint by value and NOT by reference!
+        // Counting combinations WITHOUT replacement
+        if (ipoint > nparts) return 0;
+        if (ipoint * 2 > nparts) ipoint = nparts-ipoint;
+
+        int result = nparts;
+        for( int i = 2; i <= ipoint; ++i ) {
+            result *= (nparts-i+1);
+            result /= i;
+        }
+        return result;
+
+        // Counting combinations WITH replacement:
+        // if (ipoint * 2 > (nparts + ipoint - 1)) ipoint = nparts - 1;
+
+        // int result = nparts + ipoint - 1;
+        // for( int i = 2; i <= ipoint; ++i ) {
+        //     result *= (nparts + ipoint - i);
+        //     result /= i;
+        // }
+        // return result;
+
+        // Counting permutations WITH replacement:
+        // return std::pow(nparts, ipoint);
     }
 
 	std::vector<fastjet::PseudoJet> merge_signal_background_pjvectors(const std::vector<fastjet::PseudoJet> &signal, 
