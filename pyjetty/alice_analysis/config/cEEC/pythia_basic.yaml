@@ -26,3 +26,4 @@ pT_binning: [0, 200, 200]
 Nconst_binning: [0, 50, 50]
 npoint: 3
 npower: 1
+jet_matching_distance: 0.6

@@ -102,6 +102,8 @@ class PythiaGenENC(process_base.ProcessBase):
     def prepare(self):
         pt_bins, _ = gutils.linbins(self.pT_min, self.pT_max, self.pT_nbins)
         RL_bins, _, _, _, _ = gutils.logbins(self.RL_min, self.RL_max, self.RL_nbins)
+        virt_bins6080, _, _, _, _ = gutils.logbins(self.RL_min * 69.56299686609182, self.RL_max * 69.56299686609182, self.RL_nbins)
+        virt_bins80100, _, _, _, _ = gutils.logbins(self.RL_min * 89.58304873159094, self.RL_max * 89.58304873159094, self.RL_nbins)
         Nconst_bins, _ = gutils.linbins(self.Nconst_min, self.Nconst_max, self.Nconst_nbins)
         self.hNevents = ROOT.TH1I("hNevents", 'Number accepted events (unscaled)', 2, -0.5, 1.5)
 
@@ -121,13 +123,15 @@ class PythiaGenENC(process_base.ProcessBase):
                 self.hists['jetpT'][jet_level][jetR] = ROOT.TH1D(f"h_jetpT_{jet_level}_R{R_label}", 'jet p_{T} distribution;jet p_{T} (GeV);Counts', self.pT_nbins, pt_bins)
                 self.hists['Nconst'][jet_level][jetR] = ROOT.TH2D(f'h_Nconst_jetpT_{jet_level}_R{R_label}_1', f"Jet constituents;jet pT (GeV);Nconst", self.pT_nbins, pt_bins, self.Nconst_nbins, Nconst_bins)
                 self.hists['ENC'][jet_level][jetR] = {}
-                for cEEC_type in gutils.cEEC_types:
-                    self.hists['ENC'][jet_level][jetR][cEEC_type] = {}
-                    for ipoint in range(2, self.npoint + 1):
-                        if cEEC_type == "PM" and ipoint > 2:
-                            continue
-                        else:
-                            self.hists['ENC'][jet_level][jetR][cEEC_type][ipoint] = ROOT.TH2D(f'h_ENC{ipoint}{cEEC_type}_jetpT_{jet_level}_R{R_label}_1', f'ENC{ipoint}{cEEC_type};jet p_{{T}} (GeV);R_{{L}}', self.pT_nbins, pt_bins, self.RL_nbins, RL_bins)
+                for ipoint in range(2, self.npoint + 1):
+                    self.hists['ENC'][jet_level][jetR][ipoint] = {}
+                    for cEEC_type in gutils.cEEC_types:
+                        self.hists['ENC'][jet_level][jetR][ipoint][cEEC_type] = ROOT.TH2D(f'h_ENC{ipoint}_{cEEC_type}_jetpT_{jet_level}_R{R_label}_1', f'ENC{ipoint}{cEEC_type};jet p_{{T}} (GeV);R_{{L}}', self.pT_nbins, pt_bins, self.RL_nbins, RL_bins)
+                    self.hists['ENC'][jet_level][jetR][ipoint]['Tvirt6080'] = ROOT.TH2D(f'h_ENC{ipoint}_Tvirt6080_jetpT_{jet_level}_R{R_label}_1', f'ENC{ipoint}Tvirt60-80;jet p_{{T}} (GeV);virt', self.pT_nbins, pt_bins, self.RL_nbins, virt_bins6080)
+                    self.hists['ENC'][jet_level][jetR][ipoint]['Tvirt80100'] = ROOT.TH2D(f'h_ENC{ipoint}_Tvirt80100_jetpT_{jet_level}_R{R_label}_1', f'ENC{ipoint}Tvirt80-100;jet p_{{T}} (GeV);virt', self.pT_nbins, pt_bins, self.RL_nbins, virt_bins80100)
+                    if ipoint == 2:
+                        self.hists['ENC'][jet_level][jetR][ipoint]['PM'] = ROOT.TH2D(f'h_ENC{ipoint}_PM_jetpT_{jet_level}_R{R_label}_1', f'ENC{ipoint}PM;jet p_{{T}} (GeV);R_{{L}}', self.pT_nbins, pt_bins, self.RL_nbins, RL_bins)
+
 
         self.jet_def = {}
         self.jet_selector = {}
@@ -238,7 +242,9 @@ class PythiaGenENC(process_base.ProcessBase):
             # for index in range(cb0.correlator(ipoint).rs().size()):
                 # getattr(self, f'h_ENC{ipoint}TR_JetPt_{level}_R{R_label}_trk00').Fill(jet.perp(), cb0.correlator(ipoint).rs()[index], cb0.correlator(ipoint).weights()[index])
             for index in range(cb1.correlator(ipoint).rs().size()):
-                self.hists['ENC'][jet_level][jetR]['TR'][ipoint].Fill(jet.perp(), cb1.correlator(ipoint).rs()[index], cb1.correlator(ipoint).weights()[index])
+                self.hists['ENC'][jet_level][jetR][ipoint]['Tvirt6080'].Fill(jet.perp(), cb1.correlator(ipoint).rs()[index] * jet.perp(), cb1.correlator(ipoint).weights()[index])
+                self.hists['ENC'][jet_level][jetR][ipoint]['Tvirt80100'].Fill(jet.perp(), cb1.correlator(ipoint).rs()[index] * jet.perp(), cb1.correlator(ipoint).weights()[index])
+                self.hists['ENC'][jet_level][jetR][ipoint]['T'].Fill(jet.perp(), cb1.correlator(ipoint).rs()[index], cb1.correlator(ipoint).weights()[index])
         
         if jet_level == "ch":
             for ipoint in range(2, self.npoint+1):
@@ -248,13 +254,13 @@ class PythiaGenENC(process_base.ProcessBase):
                     for i in range(ipoint):
                         charges[i] = pythiafjext.getPythia8Particle(jet_const[indices[i]]).charge()
                     if np.all(charges > 0):
-                        self.hists['ENC'][jet_level][jetR]['P'][ipoint].Fill(jet.perp(), RL, weight)
+                        self.hists['ENC'][jet_level][jetR][ipoint]['P'].Fill(jet.perp(), RL, weight)
                     elif np.all(charges < 0):
-                        self.hists['ENC'][jet_level][jetR]['M'][ipoint].Fill(jet.perp(), RL, weight)
+                        self.hists['ENC'][jet_level][jetR][ipoint]['M'].Fill(jet.perp(), RL, weight)
                     else:
                         if ipoint == 2:
-                            self.hists['ENC'][jet_level][jetR]['PM'][ipoint].Fill(jet.perp(), RL, weight)
-                    self.hists['ENC'][jet_level][jetR]['Q'][ipoint].Fill(jet.perp(), RL, np.prod(charges) * weight)
+                            self.hists['ENC'][jet_level][jetR][ipoint]['PM'].Fill(jet.perp(), RL, weight)
+                    self.hists['ENC'][jet_level][jetR][ipoint]['Q'].Fill(jet.perp(), RL, np.prod(charges) * weight)
         self.hists['Nconst'][jet_level][jetR].Fill(jet.perp(), len(jet_const))
        
     #---------------------------------------------------------------
