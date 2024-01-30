@@ -1,0 +1,31 @@
+# processing parameters
+jet_levels: ['ch']
+jetR: [0.4]
+
+debug_level: 0
+
+do_matching: True
+jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
+reject_tracks_fraction: 0.0
+eta_max: 0.9
+min_det_trk_pT: 0.15
+min_jet_trk_pT: 1.0
+min_jet_pT: 5.0
+leading_jet_const_pT: 0
+
+init_parton_ids: [0, 1, 2, 3, 4, 5, 21]
+
+do_tagging: False
+do_reshuffle: False
+do_theory_check: False
+
+beyond_jetR: False
+part_levels: ['p', 'h', 'ch']
+
+# additions by Tucker
+RL_binning: [1.0E-3, 1, 50] # the period is important as otherwise PyYAML will read it as a string
+pT_binning: [0, 200, 200]
+Nconst_binning: [0, 50, 30]
+npoint: 3
+npower: 1
+jet_matching_distance: 0.6

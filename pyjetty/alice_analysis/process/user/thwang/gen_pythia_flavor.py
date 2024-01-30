@@ -51,7 +51,8 @@ class PythiaGenENC(process_base.ProcessBase):
         self.RL_min, self.RL_max, self.RL_nbins = config["RL_binning"]
         self.pT_min, self.pT_max, self.pT_nbins = config["pT_binning"]
         self.Nconst_min, self.Nconst_max, self.Nconst_nbins = config["Nconst_binning"]
-
+        self.init_parton_ids = config["init_parton_ids"]
+        self.init_parton_ids_nozero = [id for id in self.init_parton_ids if id != 0]
 
         self.nev = args.nev
         self.do_theory_check = config["do_theory_check"]
@@ -104,12 +105,8 @@ class PythiaGenENC(process_base.ProcessBase):
     def prepare(self):
         pt_bins, _ = gutils.linbins(self.pT_min, self.pT_max, self.pT_nbins)
         RL_bins, _, _, _, _ = gutils.logbins(self.RL_min, self.RL_max, self.RL_nbins)
-        virt_bins6080, _, _, _, _ = gutils.logbins(self.RL_min * 69.56299686609182, self.RL_max * 69.56299686609182, self.RL_nbins)
-        virt_bins80100, _, _, _, _ = gutils.logbins(self.RL_min * 89.58304873159094, self.RL_max * 89.58304873159094, self.RL_nbins)
-        Nconst_bins, _ = gutils.linbins(self.Nconst_min, self.Nconst_max, self.Nconst_nbins)
         self.hNevents = ROOT.TH1I("hNevents", 'Number accepted events (unscaled)', 2, -0.5, 1.5)
 
-        self.init_parton_ids = [0, 1, 2, 21]
         # dictionary for storing histograms
         self.hists = {}
 
@@ -242,7 +239,7 @@ class PythiaGenENC(process_base.ProcessBase):
         for parton_parent in self.parton_parents:
             if parton_parent.perp()/jet.perp() < 0.1 or parton_parent.perp()/jet.perp() > 10:
                 continue
-            if self._is_geo_matched(jet, parton_parent, jetR) and parton_parent.user_index() in [1, 2, 21]: # NB: using a looser matching criteria for intial parton tagging
+            if self._is_geo_matched(jet, parton_parent, jetR) and parton_parent.user_index() in self.init_parton_ids_nozero:
                 matched_parton_parents.append(parton_parent.user_index())
         
         id = 0
