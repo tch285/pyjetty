@@ -75,7 +75,7 @@ class ProcessIO(common_base.CommonBase):
       self.event_columns += ['event_plane_angle']
     
     # Set relevant columns of track tree
-    self.track_columns = self.unique_identifier + ['ParticlePt', 'ParticleEta', 'ParticlePhi']
+    self.track_columns = self.unique_identifier + ['ParticlePt', 'ParticleEta', 'ParticlePhi', 'ParticleCharge']
     if is_jetscape:
         self.track_columns += ['status']
     if is_ENC:
@@ -414,6 +414,11 @@ class ProcessIO(common_base.CommonBase):
       df_tracks_accepted['ParticlePt'].values, df_tracks_accepted['ParticleEta'].values,
       df_tracks_accepted['ParticlePhi'].values, m_array, user_index_offset)
 
+    for i, charge in enumerate(df_tracks_accepted['ParticleCharge'].values):
+      fj_particles[i].set_python_info(int(charge))
+      # print("in set loop", fj_particles[i].python_info())
+    # for particle in fj_particles:
+    #   print("out of set loop", particle.python_info())
     return fj_particles
     # if self.is_ENC:
     #   if self.is_det_level:
