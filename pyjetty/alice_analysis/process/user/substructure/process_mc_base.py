@@ -33,6 +33,7 @@ from array import *
 import ROOT
 import yaml
 import random
+import sys
 import math
 
 # Fastjet via python (from external library heppy)
@@ -591,9 +592,10 @@ class ProcessMCBase(process_base.ProcessBase):
         
         jets_det_pp = fj.sorted_by_pt(cs_det.inclusive_jets())
         # make sure the user info (on the jet side) for jets are all empty right after the jet-clustering 
-        for jet in jets_det_pp:
-          if jet.has_user_info():
-            jet.python_info().clear_jet_info()
+        # for jet in jets_det_pp: #HACK: not sure if this is unnecessary, but removing it...
+        #   print(f"This jet has {len(jet.constituents())}")
+        #   if jet.has_user_info():
+        #     jet.python_info().clear_jet_info()
         jets_det_pp_selected = jet_selector_det(jets_det_pp)
         
         if self.ENC_fastsim:
@@ -608,9 +610,9 @@ class ProcessMCBase(process_base.ProcessBase):
 
         jets_truth = fj.sorted_by_pt(cs_truth.inclusive_jets())
         # make sure the user info (on the jet side) for jets are all empty right after the jet-clustering  
-        for jet in jets_truth:
-          if jet.has_user_info():
-            jet.python_info().clear_jet_info()
+        # for jet in jets_truth: #HACK: not sure this is unnecessary, bt removing it...
+        #   if jet.has_user_info():
+        #     jet.python_info().clear_jet_info()
         jets_truth_selected = jet_selector_det(jets_truth)
         jets_truth_selected_matched = jet_selector_truth_matched(jets_truth)
       
@@ -733,12 +735,12 @@ class ProcessMCBase(process_base.ProcessBase):
         self.fill_truth_before_matching(jet_truth, jetR)
   
     # Loop through jets and set jet matching candidates for each jet in user_info
-    if self.is_pp:
-        [[self.set_matching_candidates(jet_det, jet_truth, jetR, 'hDeltaR_All_R{}'.format(jetR)) for jet_truth in jets_truth_selected_matched] for jet_det in jets_det_selected]
-    else:
+    # if self.is_pp:
+        # [[self.set_matching_candidates(jet_det, jet_truth, jetR, 'hDeltaR_All_R{}'.format(jetR)) for jet_truth in jets_truth_selected_matched] for jet_det in jets_det_selected]#HACK:
+    # else:
         # First fill the combined-to-pp matches, then the pp-to-pp matches
-        [[self.set_matching_candidates(jet_det_combined, jet_det_pp, jetR, 'hDeltaR_combined_ppdet_R{{}}_Rmax{}'.format(R_max), fill_jet1_matches_only=True) for jet_det_pp in jets_det_pp_selected] for jet_det_combined in jets_det_selected]
-        [[self.set_matching_candidates(jet_det_pp, jet_truth, jetR, 'hDeltaR_ppdet_pptrue_R{{}}_Rmax{}'.format(R_max)) for jet_truth in jets_truth_selected_matched] for jet_det_pp in jets_det_pp_selected]
+      # [[self.set_matching_candidates(jet_det_combined, jet_det_pp, jetR, 'hDeltaR_combined_ppdet_R{{}}_Rmax{}'.format(R_max), fill_jet1_matches_only=True) for jet_det_pp in jets_det_pp_selected] for jet_det_combined in jets_det_selected]
+      # [[self.set_matching_candidates(jet_det_pp, jet_truth, jetR, 'hDeltaR_ppdet_pptrue_R{{}}_Rmax{}'.format(R_max)) for jet_truth in jets_truth_selected_matched] for jet_det_pp in jets_det_pp_selected] #HACK: this and upper line commented out
 
     # # debug
     # for jet_det_combined in jets_det_selected:
@@ -749,15 +751,27 @@ class ProcessMCBase(process_base.ProcessBase):
     #     print('matches to',len(jet_det_combined.python_info().closest_jet.constituents()))
         
     # Loop through jets and set accepted matches
-    if self.is_pp:
-        hname = 'hJetMatchingQA_R{}'.format(jetR)
-        [self.set_matches_pp(jet_det, hname) for jet_det in jets_det_selected]
-    else:
-        hname = 'hJetMatchingQA_R{}_Rmax{}'.format(jetR, R_max)
-        [self.set_matches_AA(jet_det_combined, jetR, hname) for jet_det_combined in jets_det_selected]
+    # if self.is_pp: #HACK: this if else commented out
+    #     hname = 'hJetMatchingQA_R{}'.format(jetR)
+        # print(print(len(jets_det))
+        # jetlist = []
+        # for jet_det in jets_det_selected:
+        #   if jet_det.has_user_info():
+        #     jetlist.append((len(jet_det.constituents()), jet_det.python_info()))
+        #   else:
+        #     jetlist.append((len(jet_det.constituents()), "no info"))
+        #   if len(jet_det.constituents()) == 1:
+        #     print("POSSIBLE ERROR HERE")
+        #     jet_det.constituents()[0].
+        # print(jetlist)
+        # print([(len(jet_det.constituents()), jet_det.python_info()) if jet_det.has_user_info() else (len(jet_det.constituents()), "no info")])
+        # [self.set_matches_pp(jet_det, hname) for jet_det in jets_det_selected]
+    # else:
+    #     hname = 'hJetMatchingQA_R{}_Rmax{}'.format(jetR, R_max)
+    #     [self.set_matches_AA(jet_det_combined, jetR, hname) for jet_det_combined in jets_det_selected]
           
     # Loop through jets and fill response histograms if both det and truth jets are unique match
-    result = [self.fill_jet_matches(jet_det, jetR, R_max, fj_particles_det_holes, fj_particles_truth_holes, rho_bge, fj_particles_det_cones, fj_particles_truth_cones) for jet_det in jets_det_selected]
+    # result = [self.fill_jet_matches(jet_det, jetR, R_max, fj_particles_det_holes, fj_particles_truth_holes, rho_bge, fj_particles_det_cones, fj_particles_truth_cones) for jet_det in jets_det_selected]
 
   #---------------------------------------------------------------
   # Fill some background histograms

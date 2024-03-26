@@ -56,19 +56,28 @@ class ProcessData_ENC(process_data_base.ProcessDataBase):
 		super(ProcessData_ENC, self).__init__(input_file, config_file, output_dir, debug_level, **kwargs)
 
 		self.observable = self.observable_list[0]
+		with open(self.config_file, 'r') as stream:
+			config = yaml.safe_load(stream)
+			
+		self.pT_min, self.pT_max, self.pT_nbins = config["pT_binning"]
+		self.RL_min, self.RL_max, self.RL_nbins = config["RL_binning"]
+		self.pTRL_min, self.pTRL_max, self.pTRL_nbins = config["pTRL_binning"]
+		self.pT_bins = linbins(self.pT_min,self.pT_max,self.pT_nbins)
+		self.RL_bins = logbins(self.RL_min,self.RL_max,self.RL_nbins)
+		self.pTRL_bins = logbins(self.pTRL_min,self.pTRL_max,self.pTRL_nbins)
 
 
 	#---------------------------------------------------------------
 	# Initialize histograms
 	#---------------------------------------------------------------
 	def initialize_user_output_objects(self):
-		pt_nbins = 200
-		RLmin = 1E-3
-		RLmax = 1
-		RL_nbins = 30
-		PtRLmin = 1e-3
-		PtRLmax = 1e2
-		PtRL_nbins = 60
+		# self.pT_nbins = 200
+		# self.RL_min = 1E-3
+		# self.RL_max = 1
+		# self.RL_nbins = 30
+		# self.pTRL_min = 1e-3
+		# self.pTRL_max = 1e2
+		# self.pTRL_nbins = 60
 		for jetR in self.jetR_list:
 			for observable in self.observable_list:
 				for trk_thrd in self.obs_settings[observable]:
@@ -88,17 +97,15 @@ class ProcessData_ENC(process_data_base.ProcessDataBase):
 						if 'ENC' in observable:
 							for ipoint in range(2, 4):
 								name = 'h_{}_JetPt_R{}_{}{}'.format(observable + str(ipoint), jetR, trk_thrd, jet_type_label)
-								pt_bins = linbins(0,200,pt_nbins)
-								RL_bins = logbins(RLmin,RLmax,RL_nbins)
-								h = ROOT.TH2D(name, name, pt_nbins, pt_bins, RL_nbins, RL_bins)
+								h = ROOT.TH2D(name, name, self.pT_nbins, self.pT_bins, self.RL_nbins, self.RL_bins)
 								h.GetXaxis().SetTitle('p_{T,ch jet}')
 								h.GetYaxis().SetTitle('R_{L}')
 								setattr(self, name, h)
 
 								name = 'h_{}Pt_JetPt_R{}_{}{}'.format(observable + str(ipoint), jetR, trk_thrd, jet_type_label)
-								pt_bins = linbins(0,200,pt_nbins)
-								ptRL_bins = logbins(PtRLmin,PtRLmax,PtRL_nbins)
-								h = ROOT.TH2D(name, name, pt_nbins, pt_bins, PtRL_nbins, ptRL_bins)
+								# pt_bins = linbins(0,200,self.pT_nbins)
+								# ptRL_bins = logbins(self.pTRL_min,self.pTRL_max,self.pTRL_nbins)
+								h = ROOT.TH2D(name, name, self.pT_nbins, self.pT_bins, self.pTRL_nbins, self.pTRL_bins)
 								h.GetXaxis().SetTitle('p_{T,ch jet}')
 								h.GetYaxis().SetTitle('p_{T,ch jet}R_{L}') # NB: y axis scaled by jet pt (applied jet by jet)
 								setattr(self, name, h)
@@ -130,17 +137,17 @@ class ProcessData_ENC(process_data_base.ProcessDataBase):
 
 						if 'E2C' in observable or 'E3C' in observable:
 							name = 'h_{}_JetPt_R{}_{}{}'.format(observable, jetR, trk_thrd, jet_type_label)
-							pt_bins = linbins(0, 200, pt_nbins)
-							RL_bins = logbins(RLmin, RLmax, RL_nbins)
-							h = ROOT.TH2D(name, name, pt_nbins, pt_bins, RL_nbins, RL_bins)
+							# pt_bins = linbins(0, 200, self.pT_nbins)
+							# RL_bins = logbins(self.RL_min, self.RL_max, self.RL_nbins)
+							h = ROOT.TH2D(name, name, self.pT_nbins, self.pT_bins, self.RL_nbins, self.RL_bins)
 							h.GetXaxis().SetTitle('p_{T,ch jet}')
 							h.GetYaxis().SetTitle('R_{L}')
 							setattr(self, name, h)
 
 							name = 'h_{}Pt_JetPt_R{}_{}{}'.format(observable, jetR, trk_thrd, jet_type_label)
-							pt_bins = linbins(0, 200, pt_nbins)
-							ptRL_bins = logbins(PtRLmin, PtRLmax, PtRL_nbins)
-							h = ROOT.TH2D(name, name, pt_nbins, pt_bins, PtRL_nbins, ptRL_bins)
+							# pt_bins = linbins(0, 200, self.pT_nbins)
+							# ptRL_bins = logbins(self.pTRL_min, self.pTRL_max, self.pTRL_nbins)
+							h = ROOT.TH2D(name, name, self.pT_nbins, self.pT_bins, self.pTRL_nbins, self.pTRL_bins)
 							h.GetXaxis().SetTitle('p_{T,ch jet}')
 							h.GetYaxis().SetTitle('p_{T,ch jet}R_{L}') # NB: y axis scaled by jet pt (applied jet by jet)
 							setattr(self, name, h)
@@ -281,7 +288,6 @@ class ProcessData_ENC(process_data_base.ProcessDataBase):
 	#---------------------------------------------------------------
 	def fill_jet_histograms(self, jet, jet_groomed_lund, jetR, obs_setting, grooming_setting,
 													obs_label, jet_pt_ungroomed, suffix):
-
 		constituents = fj.sorted_by_pt(jet.constituents())
 		c_select = fj.vectorPJ()
 		trk_thrd = obs_setting
@@ -361,8 +367,8 @@ class ProcessData_ENC(process_data_base.ProcessDataBase):
 			getattr(self, hname2.format('T', '', jetR, obs_label, suffix)).Fill(jet_pt, RL, weight)
 			getattr(self, hname2.format('T', 'Pt', jetR, obs_label, suffix)).Fill(jet_pt, jet_pt * RL, weight)
 			# print("new; ipoint 2 ", weight)
-	# cE3C_observables = [obs for obs in self.observable_list if 'E3C' in obs]
-	# for observable in cE3C_observables:
+		# cE3C_observables = [obs for obs in self.observable_list if 'E3C' in obs]
+		# for observable in cE3C_observables:
 		ipoint = 3
 		for indices, RL, weight in zip(new_corr.correlator(ipoint).indices(), new_corr.correlator(ipoint).rs(), new_corr.correlator(ipoint).weights()):
 			# processing only like-sign pairs when self.ENC_pair_like is on
