@@ -40,7 +40,7 @@ class CommonUtils(common_base.CommonBase):
   # from observable config block
   #---------------------------------------------------------------
   def obs_settings(self, observable, obs_config_dict, obs_subconfig_list):
-    print('using wenqing code for utils')
+    # print('using wenqing code for utils')
     if 'subjet_z' in observable:
       return [obs_config_dict[name]['subjet_R'] for name in obs_subconfig_list]
     elif observable == 'jet_axis':
