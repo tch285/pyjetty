@@ -215,7 +215,8 @@ namespace EnergyCorrelators
                         //     }
                         // }
 
-                        _deltaR = parts[idx_i].delta_R(parts[idx_j]);
+                        // _deltaR = parts[idx_i].delta_R(parts[idx_j]);
+                        _deltaR = std::sqrt(std::pow(parts[idx_i].delta_phi_to(parts[idx_j]), 2) + std::pow(parts[idx_i].eta() - parts[idx_j].eta(), 2));
                         if (_deltaR > _max_deltaR) {
                             _max_deltaR = _deltaR;
                             max_idx_i = idx_i;
