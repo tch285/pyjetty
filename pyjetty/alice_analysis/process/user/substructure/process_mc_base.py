@@ -40,6 +40,7 @@ import math
 import fastjet as fj
 import fjcontrib
 import fjtools
+from particle import PDGID
 
 # Analysis utilities
 from pyjetty.alice_analysis.process.base import process_io
@@ -81,29 +82,29 @@ class ProcessMCBase(process_base.ProcessBase):
         self.fast_simulation = config['fast_simulation']
         if self.fast_simulation == True:
             if 'ENC_fastsim' in config:
-                    self.ENC_fastsim = config['ENC_fastsim']
+                self.ENC_fastsim = config['ENC_fastsim']
             else:
-                    self.ENC_fastsim = False
+                self.ENC_fastsim = False
         else: # if not fast simulation, set ENC_fastsim flag to False
             self.ENC_fastsim = False  
         if self.ENC_fastsim == True:
             self.pair_eff_file = config['pair_eff_file'] # load pair efficiency input for fastsim
         if 'ENC_pair_cut' in config:
-                self.ENC_pair_cut = config['ENC_pair_cut']
+            self.ENC_pair_cut = config['ENC_pair_cut']
         else:
-                self.ENC_pair_cut = False
+            self.ENC_pair_cut = False
         if 'ENC_pair_like' in config:
-                self.ENC_pair_like = config['ENC_pair_like']
+            self.ENC_pair_like = config['ENC_pair_like']
         else:
-                self.ENC_pair_like = False
+            self.ENC_pair_like = False
         if 'ENC_pair_unlike' in config:
-                self.ENC_pair_unlike = config['ENC_pair_unlike']
+            self.ENC_pair_unlike = config['ENC_pair_unlike']
         else:
-                self.ENC_pair_unlike = False
+            self.ENC_pair_unlike = False
         if 'jetscape' in config:
-                self.jetscape = config['jetscape']
+            self.jetscape = config['jetscape']
         else:
-                self.jetscape = False
+            self.jetscape = False
         if 'event_plane_angle' in config:
             self.event_plane_range = config['event_plane_angle']
         else:
@@ -246,16 +247,16 @@ class ProcessMCBase(process_base.ProcessBase):
         # print('debug df_fjparticles_det',df_fjparticles_det)
         # print('debug df_fjparticles_truth',df_fjparticles_truth)
         if self.jetscape:
-                self.df_fjparticles = pandas.concat([df_fjparticles_det, df_fjparticles_truth, df_fjparticles_det_holes, df_fjparticles_truth_holes], axis=1)
-                self.df_fjparticles.columns = ['fj_particles_det', 'fj_particles_truth', 'fj_particles_det_holes', 'fj_particles_truth_holes']
+            self.df_fjparticles = pandas.concat([df_fjparticles_det, df_fjparticles_truth, df_fjparticles_det_holes, df_fjparticles_truth_holes], axis=1)
+            self.df_fjparticles.columns = ['fj_particles_det', 'fj_particles_truth', 'fj_particles_det_holes', 'fj_particles_truth_holes']
         elif self.ENC_fastsim:
-                self.df_fjparticles = pandas.concat([df_fjparticles_det, df_fjparticles_truth], axis=1)
-                self.df_fjparticles.columns = ['fj_particles_det', 'ParticleMCIndex', 'fj_particles_truth', 'ParticlePID']
-                print('Merged output',self.df_fjparticles.columns)
-                print(self.df_fjparticles)
+            self.df_fjparticles = pandas.concat([df_fjparticles_det, df_fjparticles_truth], axis=1)
+            self.df_fjparticles.columns = ['fj_particles_det', 'ParticleMCIndex', 'fj_particles_truth', 'ParticlePID']
+            print('Merged output',self.df_fjparticles.columns)
+            print(self.df_fjparticles)
         else:
-                self.df_fjparticles = pandas.concat([df_fjparticles_det, df_fjparticles_truth], axis=1)
-                self.df_fjparticles.columns = ['fj_particles_det', 'fj_particles_truth']
+            self.df_fjparticles = pandas.concat([df_fjparticles_det, df_fjparticles_truth], axis=1)
+            self.df_fjparticles.columns = ['fj_particles_det', 'fj_particles_truth']
         print('--- {} seconds ---'.format(time.time() - self.start_time))
 
         # ------------------------------------------------------------------------
@@ -315,14 +316,13 @@ class ProcessMCBase(process_base.ProcessBase):
         
         # Base histograms
         if self.is_pp:
-            pass
-            # name = 'hJES_R{}'.format(jetR)
-            # h = ROOT.TH2F(name, name, 300, 0, 300, 200, -1., 1.)
-            # setattr(self, name, h)
+            name = 'hJES_R{}'.format(jetR)
+            h = ROOT.TH2F(name, name, 300, 0, 300, 200, -1., 1.)
+            setattr(self, name, h)
     
-            # name = 'hDeltaR_All_R{}'.format(jetR)
-            # h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
-            # setattr(self, name, h)
+            name = 'hDeltaR_All_R{}'.format(jetR)
+            h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
+            setattr(self, name, h)
                 
         else:
             for R_max in self.max_distance:
@@ -351,13 +351,13 @@ class ProcessMCBase(process_base.ProcessBase):
                 h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 2.)
                 setattr(self, name, h)
                         
-        name = 'hZ_Truth_R{}'.format(jetR)
-        h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 1.)
-        setattr(self, name, h)
+        # name = 'hZ_Truth_R{}'.format(jetR)
+        # h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 1.)
+        # setattr(self, name, h)
         
-        name = 'hZ_Det_R{}'.format(jetR)
-        h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 1.)
-        setattr(self, name, h)
+        # name = 'hZ_Det_R{}'.format(jetR)
+        # h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 1.)
+        # setattr(self, name, h)
 
     #---------------------------------------------------------------
     # Main function to loop through and analyze events
@@ -446,30 +446,40 @@ class ProcessMCBase(process_base.ProcessBase):
                 # NB: this can be avoided by decaying these paritcles within the generation step
                 else:
                     particles_charge_truth = np.append(particles_charge_truth, 0)
+                # print(PDGID(pid).charge, particles_charge_truth[-1])
+                if PDGID(pid).charge != particles_charge_truth[-1]:
+                    print("MISMATCHED CHARGE----------------------------------------------------------------------------------------")
             
         # Check that the entries exist appropriately
         # (need to check how this can happen -- but it is only a tiny fraction of events)
         if type(fj_particles_det) != fj.vectorPJ or type(fj_particles_truth) != fj.vectorPJ:
-            print('fj_particles type mismatch -- skipping event')
+            # print(self.event_number)
+            # print(f'fj_particles type mismatch -- skipping event. fj_particles_det is type {type(fj_particles_det)} and fj_particles_truth is type {type(fj_particles_truth)}')
+            # print(fj_particles_det)
             return
         else:
-            # Todo
+            # TODO:
             ## for full simulation, match det-level and truth level particles
             ## sort both list by pT, phi and eta first before matching
 
             # add associated truth info and charge info in fj_particles_det using the JetInfo object
+            # HACK: don't need mcid here really, and charge is already being converted so no need for this
+            # pass
             if self.ENC_fastsim:
                 for index, mcid in enumerate(particles_mcid_det):
                     if fj_particles_det[index].has_user_info():
                         ecorr_user_info = fj_particles_det[index].python_info()
+                        print("user info already found?")
                     else:
                         ecorr_user_info = jet_info.JetInfo()
+                        # print("user info NOT found, built")
                     if mcid>=0 and mcid<len(fj_particles_truth):
                         # print('debug6', p, 'mcid/length', mcid, len(fj_particles_truth))
                         # print('debug6', p, 'truth', fj_particles_truth[int(mcid)])
                         # print('debug6', p, 'charge', particles_charge_truth[int(mcid)])
                         ecorr_user_info.particle_truth = fj_particles_truth[int(mcid)]
-                        ecorr_user_info.charge = particles_charge_truth[int(mcid)]
+                        # ecorr_user_info.charge = particles_charge_truth[int(mcid)]
+                        ecorr_user_info.charge = PDGID(particles_pid_truth[int(mcid)]).charge
                     else:
                         print("invalid associated MC Index, filling default values (particle_truth = None, charge = 1000)")
                     fj_particles_det[index].set_python_info(ecorr_user_info)
@@ -481,7 +491,8 @@ class ProcessMCBase(process_base.ProcessBase):
                     else:
                         ecorr_user_info = jet_info.JetInfo()
                     ecorr_user_info.particle_truth = fj_particles_truth[index]
-                    ecorr_user_info.charge = particles_charge_truth[index]
+                    # ecorr_user_info.charge = particles_charge_truth[index]
+                    ecorr_user_info.charge = PDGID(particles_pid_truth[index]).charge
                     fj_particles_truth[index].set_python_info(ecorr_user_info)
                     # fj_particles_truth[index].set_user_index(int(index))
 
@@ -557,7 +568,7 @@ class ProcessMCBase(process_base.ProcessBase):
             return
 
         # Loop through jetR, and process event for each R
-        for jetR in self.jetR_list:        
+        for jetR in self.jetR_list:
         
             # Keep track of whether to fill R-independent histograms
             self.fill_R_indep_hists = (jetR == self.jetR_list[0])
@@ -579,7 +590,9 @@ class ProcessMCBase(process_base.ProcessBase):
                     # FIX ME: should treat long lived charged particle differently (check how the existing fast herwig and pythia handles it)
                     fj_particles_det_ch = fj.vectorPJ()
                     for part in fj_particles_det:
-                        if part.python_info().charge!=0: # only use charged particles
+                        if part.python_info().charge!=0: # only use charged particles HACK: commented out line, using the one after it
+                        # print(part.python_info())
+                        # if part.python_info()!=0:
                             fj_particles_det_ch.append(part)
                     cs_det = fj.ClusterSequence(fj_particles_det_ch, jet_def)
                 else:
@@ -587,17 +600,17 @@ class ProcessMCBase(process_base.ProcessBase):
                 
                 jets_det_pp = fj.sorted_by_pt(cs_det.inclusive_jets())
                 # make sure the user info (on the jet side) for jets are all empty right after the jet-clustering 
-                # for jet in jets_det_pp: #HACK: not sure if this is unnecessary, but removing it...
-                #   print(f"This jet has {len(jet.constituents())}")
-                #   if jet.has_user_info():
-                #     jet.python_info().clear_jet_info()
+                for jet in jets_det_pp: #HACK: not sure if this is unnecessary, but removing it...
+                    if jet.has_user_info():
+                        jet.python_info().clear_jet_info()
                 jets_det_pp_selected = jet_selector_det(jets_det_pp)
                 
                 if self.ENC_fastsim:
-                    # FIX ME: should treat long lived charged particle differently (check how the existing fast herwig and pythia handles it)
+                    # FIXME: should treat long lived charged particle differently (check how the existing fast herwig and pythia handles it)
                     fj_particles_truth_ch = fj.vectorPJ()
                     for part in fj_particles_truth:
-                        if part.python_info().charge!=0: # only use charged particles
+                        if part.python_info().charge!=0: # only use charged particles #HACK: using the next line instead
+                        # if part.python_info()!=0:
                             fj_particles_truth_ch.append(part)
                     cs_truth = fj.ClusterSequence(fj_particles_truth_ch, jet_def)
                 else:
@@ -605,9 +618,9 @@ class ProcessMCBase(process_base.ProcessBase):
 
                 jets_truth = fj.sorted_by_pt(cs_truth.inclusive_jets())
                 # make sure the user info (on the jet side) for jets are all empty right after the jet-clustering  
-                # for jet in jets_truth: #HACK: not sure this is unnecessary, bt removing it...
-                #   if jet.has_user_info():
-                #     jet.python_info().clear_jet_info()
+                for jet in jets_truth: #HACK: not sure this is unnecessary, bt removing it...
+                  if jet.has_user_info():
+                    jet.python_info().clear_jet_info()
                 jets_truth_selected = jet_selector_det(jets_truth)
                 jets_truth_selected_matched = jet_selector_truth_matched(jets_truth)
             
@@ -706,9 +719,10 @@ class ProcessMCBase(process_base.ProcessBase):
     
         if self.debug_level > 1:
             print('Number of det-level jets: {}'.format(len(jets_det_selected)))
-        
+        print('ANALYZING 1JETSSSSSSSSSSSSSSSSSSSSSSSSSSSS')
         # Fill det-level jet histograms (before matching)
         for jet_det in jets_det_selected:
+            print('ANALYZING 2JETSSSSSSSSSSSSSSSSSSSSSSSSSSSS')
             
             # Check additional acceptance criteria
             # skip event if not satisfied -- since first jet in event is highest pt
@@ -717,23 +731,25 @@ class ProcessMCBase(process_base.ProcessBase):
                     self.hNevents.Fill(0)
                 if self.debug_level > 1:
                     print('event rejected due to jet acceptance')
+                print("about to return")
                 return
             
             self.fill_det_before_matching(jet_det, jetR, R_max, rho_bge)
     
         # Fill truth-level jet histograms (before matching)
         for jet_truth in jets_truth_selected:
+            print('ANALYZING 3JETSSSSSSSSSSSSSSSSSSSSSSSSSSSS')
         
             if self.is_pp or self.fill_Rmax_indep_hists:
                 self.fill_truth_before_matching(jet_truth, jetR)
     
         # Loop through jets and set jet matching candidates for each jet in user_info
-        # if self.is_pp:
-                # [[self.set_matching_candidates(jet_det, jet_truth, jetR, 'hDeltaR_All_R{}'.format(jetR)) for jet_truth in jets_truth_selected_matched] for jet_det in jets_det_selected]#HACK:
-        # else:
-                # First fill the combined-to-pp matches, then the pp-to-pp matches
-            # [[self.set_matching_candidates(jet_det_combined, jet_det_pp, jetR, 'hDeltaR_combined_ppdet_R{{}}_Rmax{}'.format(R_max), fill_jet1_matches_only=True) for jet_det_pp in jets_det_pp_selected] for jet_det_combined in jets_det_selected]
-            # [[self.set_matching_candidates(jet_det_pp, jet_truth, jetR, 'hDeltaR_ppdet_pptrue_R{{}}_Rmax{}'.format(R_max)) for jet_truth in jets_truth_selected_matched] for jet_det_pp in jets_det_pp_selected] #HACK: this and upper line commented out
+        if self.is_pp:
+            [[self.set_matching_candidates(jet_det, jet_truth, jetR, 'hDeltaR_All_R{}'.format(jetR)) for jet_truth in jets_truth_selected_matched] for jet_det in jets_det_selected]#HACK:
+        else:
+            # First fill the combined-to-pp matches, then the pp-to-pp matches
+            [[self.set_matching_candidates(jet_det_combined, jet_det_pp, jetR, 'hDeltaR_combined_ppdet_R{{}}_Rmax{}'.format(R_max), fill_jet1_matches_only=True) for jet_det_pp in jets_det_pp_selected] for jet_det_combined in jets_det_selected]
+            [[self.set_matching_candidates(jet_det_pp, jet_truth, jetR, 'hDeltaR_ppdet_pptrue_R{{}}_Rmax{}'.format(R_max)) for jet_truth in jets_truth_selected_matched] for jet_det_pp in jets_det_pp_selected] #HACK: this and upper line commented out
 
         # # debug
         # for jet_det_combined in jets_det_selected:
@@ -744,27 +760,31 @@ class ProcessMCBase(process_base.ProcessBase):
         #     print('matches to',len(jet_det_combined.python_info().closest_jet.constituents()))
                 
         # Loop through jets and set accepted matches
-        # if self.is_pp: #HACK: this if else commented out
-        #     hname = 'hJetMatchingQA_R{}'.format(jetR)
-                # print(print(len(jets_det))
-                # jetlist = []
-                # for jet_det in jets_det_selected:
-                #   if jet_det.has_user_info():
-                #     jetlist.append((len(jet_det.constituents()), jet_det.python_info()))
-                #   else:
-                #     jetlist.append((len(jet_det.constituents()), "no info"))
-                #   if len(jet_det.constituents()) == 1:
-                #     print("POSSIBLE ERROR HERE")
-                #     jet_det.constituents()[0].
-                # print(jetlist)
-                # print([(len(jet_det.constituents()), jet_det.python_info()) if jet_det.has_user_info() else (len(jet_det.constituents()), "no info")])
-                # [self.set_matches_pp(jet_det, hname) for jet_det in jets_det_selected]
-        # else:
-        #     hname = 'hJetMatchingQA_R{}_Rmax{}'.format(jetR, R_max)
-        #     [self.set_matches_AA(jet_det_combined, jetR, hname) for jet_det_combined in jets_det_selected]
-                    
+        print('checking is pp')
+        if self.is_pp: #HACK: this if else commented out
+            print('checked is pp')
+            hname = 'hJetMatchingQA_R{}'.format(jetR)
+            if hname and not hasattr(self, hname):
+                bin_labels = ['all', 'has_matching_candidate', 'unique_match']
+                nbins = len(bin_labels)
+                h = ROOT.TH2F(hname, hname, nbins, 0, nbins, 30, 0., 300.)
+                for i in range(1, nbins+1):
+                    h.GetXaxis().SetBinLabel(i,bin_labels[i-1])
+                setattr(self, hname, h)
+            [self.set_matches_pp(jet_det, hname) for jet_det in jets_det_selected]
+        else:
+            hname = 'hJetMatchingQA_R{}_Rmax{}'.format(jetR, R_max)
+            if hname and not hasattr(self, hname):
+                bin_labels = ['all', 'has_matching_ppdet_candidate', 'has_matching_pptrue_candidate', 'has_matching_pptrue_unique_candidate', 'mc_fraction', 'deltaR_combined-truth', 'passed_all_cuts']
+                nbins = len(bin_labels)
+                h = ROOT.TH2F(hname, hname, nbins, 0, nbins,  30, 0., 300.)
+                for i in range(1, nbins+1):
+                    h.GetXaxis().SetBinLabel(i,bin_labels[i-1])
+                setattr(self, hname, h)
+            [self.set_matches_AA(jet_det_combined, jetR, hname) for jet_det_combined in jets_det_selected]
+        
         # Loop through jets and fill response histograms if both det and truth jets are unique match
-        # result = [self.fill_jet_matches(jet_det, jetR, R_max, fj_particles_det_holes, fj_particles_truth_holes, rho_bge, fj_particles_det_cones, fj_particles_truth_cones) for jet_det in jets_det_selected]
+        result = [self.fill_jet_matches(jet_det, jetR, R_max, fj_particles_det_holes, fj_particles_truth_holes, rho_bge, fj_particles_det_cones, fj_particles_truth_cones) for jet_det in jets_det_selected]
 
     #---------------------------------------------------------------
     # Fill some background histograms
@@ -819,9 +839,9 @@ class ProcessMCBase(process_base.ProcessBase):
     #---------------------------------------------------------------
     def fill_truth_before_matching(self, jet, jetR):
         # jet_pt = jet.pt()
-        for constituent in jet.constituents():
-            z = constituent.pt() / jet.pt()
-            getattr(self, 'hZ_Truth_R{}'.format(jetR)).Fill(jet.pt(), z)
+        # for constituent in jet.constituents():
+        #     z = constituent.pt() / jet.pt()
+            # getattr(self, 'hZ_Truth_R{}'.format(jetR)).Fill(jet.pt(), z)
                     
         # Fill 2D histogram of truth (pt, obs)
         hname = 'h_{{}}_JetPt_Truth_R{}_{{}}'.format(jetR)
@@ -836,9 +856,9 @@ class ProcessMCBase(process_base.ProcessBase):
             jet_pt = jet.pt()
             if self.do_rho_subtraction:
                 jet_pt = jet.pt()-rho_bge*jet.area()
-            for constituent in jet.constituents():
-                z = constituent.pt() / jet_pt
-                getattr(self, 'hZ_Det_R{}'.format(jetR)).Fill(jet_pt, z)
+            # for constituent in jet.constituents():
+            #     z = constituent.pt() / jet_pt
+            #     getattr(self, 'hZ_Det_R{}'.format(jetR)).Fill(jet_pt, z)
             
         # for const in jet.constituents():
         #   if const.perp()>0.15:

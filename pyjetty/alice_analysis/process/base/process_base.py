@@ -211,15 +211,14 @@ class ProcessBase(common_base.CommonBase):
   # it can be anything you want, e.g. 'hJetMatchingQA_R{}'.format(jetR)
   #---------------------------------------------------------------
   def set_matches_pp(self, jet_det, hname):
-
     # Create pp matching QA histogram, if not already created
-    if hname and not hasattr(self, hname):
-      bin_labels = ['all', 'has_matching_candidate', 'unique_match']
-      nbins = len(bin_labels)
-      h = ROOT.TH2F(hname, hname, nbins, 0, nbins, 30, 0., 300.)
-      for i in range(1, nbins+1):
-        h.GetXaxis().SetBinLabel(i,bin_labels[i-1])
-      setattr(self, hname, h)
+    # if hname and not hasattr(self, hname):
+    #   bin_labels = ['all', 'has_matching_candidate', 'unique_match']
+    #   nbins = len(bin_labels)
+    #   h = ROOT.TH2F(hname, hname, nbins, 0, nbins, 30, 0., 300.)
+    #   for i in range(1, nbins+1):
+    #     h.GetXaxis().SetBinLabel(i,bin_labels[i-1])
+    #   setattr(self, hname, h)
     
     if hname:
         h = getattr(self, hname)

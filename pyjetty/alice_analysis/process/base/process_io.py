@@ -22,9 +22,11 @@ import numpy as np
 # Fastjet via python (from external library fjpydev)
 import fastjet as fj
 import fjext
+from particle import PDGID
 
 # Base class
 from pyjetty.alice_analysis.process.base import common_base
+from pyjetty.alice_analysis.process.base import jet_info
 
 ################################################################
 class ProcessIO(common_base.CommonBase):
@@ -75,14 +77,16 @@ class ProcessIO(common_base.CommonBase):
       self.event_columns += ['event_plane_angle']
     
     # Set relevant columns of track tree
-    self.track_columns = self.unique_identifier + ['ParticlePt', 'ParticleEta', 'ParticlePhi', 'ParticleCharge']
+    self.track_columns = self.unique_identifier + ['ParticlePt', 'ParticleEta', 'ParticlePhi']
     if is_jetscape:
-        self.track_columns += ['status']
+      self.track_columns += ['status']
     if is_ENC:
-        if is_det_level:
-          self.track_columns += ['ParticleMCIndex']
-        else:
-          self.track_columns += ['ParticlePID']
+      if is_det_level:
+        self.track_columns += ['ParticleMCIndex']
+      else:
+        self.track_columns += ['ParticlePID']
+    else:
+      self.track_columns += ['ParticleCharge']
     
     #print(self)
     
@@ -221,7 +225,9 @@ class ProcessIO(common_base.CommonBase):
     with uproot.recreate(self.output_dir + filename) as f:
 
       branchdict = {"run_number": int, "ev_id": int, "ParticlePt": float,
-                      "ParticleEta": float, "ParticlePhi": float}
+                      "ParticleEta": float, "ParticlePhi": float, "ParticleCharge": int}
+      branchdict_true = {"run_number": int, "ev_id": int, "ParticlePt": float,
+                      "ParticleEta": float, "ParticlePhi": float, "ParticleCharge": int}
       if is_jetscape:
         branchdict_true["status"] = int
         branchdict["status"] = int
@@ -314,7 +320,8 @@ class ProcessIO(common_base.CommonBase):
 
     print('is_ENC on?',self.is_ENC)
     print('is_det on?',self.is_det_level)
-    print('debug',self.track_df)
+    print('Track df:')
+    print(self.track_df)
     if group_by_evid:
       print("Transform the track dataframe into a series object of fastjet particles per event...")
 
@@ -322,8 +329,10 @@ class ProcessIO(common_base.CommonBase):
       #     track_df_grouped is a DataFrameGroupBy object with one track dataframe per event
       track_df_grouped = None
       track_df_grouped = self.track_df.groupby(self.unique_identifier)
-      print('debug2',type(track_df_grouped))
-      print('debug2',track_df_grouped.aggregate(np.sum))
+      # print('debug2',type(track_df_grouped))
+      print('debug2')
+      print(track_df_grouped.aggregate(np.sum))
+      # print(track_df_grouped)
       # print('debug2',track_df_grouped.columns['ParticlePID'].values)
     
       # (ii) Transform the DataFrameGroupBy object to a SeriesGroupBy of fastjet particles
@@ -336,20 +345,25 @@ class ProcessIO(common_base.CommonBase):
         if self.is_det_level:
           df_fjparticles_aux = track_df_grouped.apply(
           self.get_particles_mc_index, m=m, offset_indices=offset_indices, random_mass=random_mass, min_pt=min_pt)
-          print('debug3',df_fjparticles)
-          print('debug3 aux: mcid',df_fjparticles_aux)
+          print('debug3')
+          print(df_fjparticles)
+          print('debug3 aux: mcid')
+          print(df_fjparticles_aux)
           df_fjparticles = pandas.DataFrame({"fj_particle": df_fjparticles_orig, "ParticleMCIndex": df_fjparticles_aux})
         else:
           df_fjparticles_aux = track_df_grouped.apply(
           self.get_particles_pid, m=m, offset_indices=offset_indices, random_mass=random_mass, min_pt=min_pt)
-          print('debug3',df_fjparticles)
-          print('debug3 aux: pid',df_fjparticles_aux)
+          print('debug3')
+          print(df_fjparticles)
+          print('debug3 aux: pid')
+          print(df_fjparticles_aux)
           df_fjparticles = pandas.DataFrame({"fj_particle": df_fjparticles_orig, "ParticlePID": df_fjparticles_aux})
       else:
         df_fjparticles = track_df_grouped.apply(
         self.get_fjparticles, m=m, offset_indices=offset_indices, random_mass=random_mass, min_pt=min_pt)
       
-      print('debug4, combined: ',df_fjparticles)
+      print('debug4, combined: ')
+      print(df_fjparticles)
       
       # df_fjparticles = pandas.DataFrame({"fj_particle": track_df_grouped.apply(
       #   self.get_fjparticles, m=m, offset_indices=offset_indices, random_mass=random_mass, min_pt=min_pt), "ParticleMCIndex": track_df_grouped["ParticleMCIndex"]})
@@ -413,9 +427,23 @@ class ProcessIO(common_base.CommonBase):
     fj_particles = fjext.vectorize_pt_eta_phi_m(
       df_tracks_accepted['ParticlePt'].values, df_tracks_accepted['ParticleEta'].values,
       df_tracks_accepted['ParticlePhi'].values, m_array, user_index_offset)
-
-    for i, charge in enumerate(df_tracks_accepted['ParticleCharge'].values):
-      fj_particles[i].set_python_info(int(charge))
+    if isinstance(fj_particles, float):
+      print('fj_particles FLOAT FOUND')
+    if self.is_ENC:
+      pass
+      # if self.is_det_level:
+      #   assert len(df_tracks_accepted) == len(df_tracks_accepted['ParticleEta'].values)
+      #   for i, pid in enumerate(df_tracks_accepted['ParticleEta'].values): #HACK: assigning everything a positive charge on det level for now
+      #     fj_particles[i].set_python_info(1)
+      # else:
+      #   for i, pid in enumerate(df_tracks_accepted['ParticlePID'].values):
+      #     charge = PDGID(pid).charge
+      #     fj_particles[i].set_python_info(int(charge))
+    else:
+      for i, charge in enumerate(df_tracks_accepted['ParticleCharge'].values):
+        info = jet_info.JetInfo()
+        info.charge = charge
+        fj_particles[i].set_python_info(info)
       # print("in set loop", fj_particles[i].python_info())
     # for particle in fj_particles:
     #   print("out of set loop", particle.python_info())

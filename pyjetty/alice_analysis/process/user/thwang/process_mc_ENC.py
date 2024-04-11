@@ -140,11 +140,11 @@ class ProcessMC_ENC(process_mc_base.ProcessMCBase):
 						h.GetYaxis().SetTitle('R_{L}')
 						setattr(self, name, h)
 						
-						name = 'h_{}{}Pt_JetPt_R{}_{}'.format(observable, pair_type_label, jetR, obs_label) # pt scaled histograms (currently only for unmatched jets)
-						h = ROOT.TH2D(name, name, self.pT_nbins, self.pT_bins, self.pTRL_nbins, self.pTRL_bins)
-						h.GetXaxis().SetTitle('p_{T,ch jet}')
-						h.GetYaxis().SetTitle('p_{T,ch jet}R_{L}') # NB: y axis scaled by jet pt (applied jet by jet)
-						setattr(self, name, h)
+						# name = 'h_{}{}Pt_JetPt_R{}_{}'.format(observable, pair_type_label, jetR, obs_label) # pt scaled histograms (currently only for unmatched jets)
+						# h = ROOT.TH2D(name, name, self.pT_nbins, self.pT_bins, self.pTRL_nbins, self.pTRL_bins)
+						# h.GetXaxis().SetTitle('p_{T,ch jet}')
+						# h.GetYaxis().SetTitle('p_{T,ch jet}R_{L}') # NB: y axis scaled by jet pt (applied jet by jet)
+						# setattr(self, name, h)
 						
 						# Truth histograms
 						name = 'h_{}{}_JetPt_Truth_R{}_{}'.format(observable, pair_type_label, jetR, obs_label)
@@ -153,11 +153,11 @@ class ProcessMC_ENC(process_mc_base.ProcessMCBase):
 						h.GetYaxis().SetTitle('R_{L}')
 						setattr(self, name, h)
 
-						name = 'h_{}{}Pt_JetPt_Truth_R{}_{}'.format(observable, pair_type_label, jetR, obs_label) # pt scaled histograms (currently only for unmatched jets)
-						h = ROOT.TH2D(name, name, self.pT_nbins, self.pT_bins, self.pTRL_nbins, self.pTRL_bins)
-						h.GetXaxis().SetTitle('p_{T,ch jet}')
-						h.GetYaxis().SetTitle('p_{T,ch jet}R_{L}') # NB: y axis scaled by jet pt (applied jet by jet)
-						setattr(self, name, h)
+						# name = 'h_{}{}Pt_JetPt_Truth_R{}_{}'.format(observable, pair_type_label, jetR, obs_label) # pt scaled histograms (currently only for unmatched jets)
+						# h = ROOT.TH2D(name, name, self.pT_nbins, self.pT_bins, self.pTRL_nbins, self.pTRL_bins)
+						# h.GetXaxis().SetTitle('p_{T,ch jet}')
+						# h.GetYaxis().SetTitle('p_{T,ch jet}R_{L}') # NB: y axis scaled by jet pt (applied jet by jet)
+						# setattr(self, name, h)
 
 						# Matched det histograms
 						name = 'h_matched_{}{}_JetPt_R{}_{}'.format(observable, pair_type_label, jetR, obs_label)
@@ -175,6 +175,18 @@ class ProcessMC_ENC(process_mc_base.ProcessMCBase):
 
 						# Matched truth histograms
 						name = 'h_matched_{}{}_JetPt_Truth_R{}_{}'.format(observable, pair_type_label, jetR, obs_label)
+						h = ROOT.TH2D(name, name, self.pT_nbins, self.pT_bins, self.RL_nbins, self.RL_bins)
+						h.GetXaxis().SetTitle('p_{T,ch jet}')
+						h.GetYaxis().SetTitle('R_{L}')
+						setattr(self, name, h)
+
+						name = 'h_matched_{}{}_JetPt_TruthJetPt_R{}_{}'.format(observable, pair_type_label, jetR, obs_label)
+						h = ROOT.TH2D(name, name, self.pT_nbins, self.pT_bins, self.RL_nbins, self.RL_bins)
+						h.GetXaxis().SetTitle('p_{T,ch jet}^{truth}')
+						h.GetYaxis().SetTitle('R_{L}')
+						setattr(self, name, h)
+
+						name = 'h_matched_{}{}_JetPt_TruthPairs_R{}_{}'.format(observable, pair_type_label, jetR, obs_label)
 						h = ROOT.TH2D(name, name, self.pT_nbins, self.pT_bins, self.RL_nbins, self.RL_bins)
 						h.GetXaxis().SetTitle('p_{T,ch jet}')
 						h.GetYaxis().SetTitle('R_{L}')
@@ -476,7 +488,7 @@ class ProcessMC_ENC(process_mc_base.ProcessMCBase):
 			suffix = ''
 
 		# Create THn of response for ENC
-		dim = 4;
+		dim = 4
 		title = ['p_{T,det}', 'p_{T,truth}', 'R_{L,det}', 'R_{L,truth}']
 		nbins = [30, 20, 100, 100]
 		min = [0., 0., 0., 0.]
@@ -647,6 +659,7 @@ class ProcessMC_ENC(process_mc_base.ProcessMCBase):
 		# hname = 'h_{{}}_JetPt_Truth_R{}_{{}}'.format(jetR)
 		observable_skel = "jet_E2C_{}_RL{}"
 		# getattr(self, hname.format(observable + str(ipoint) + pair_type_label,obs_label)).Fill(jet_pt, new_corr.correlator(ipoint).rs()[index], new_corr.correlator(ipoint).weights()[index])
+		ipoint = 2
 		for indices, RL, weight in zip(new_corr.correlator(ipoint).indices(), new_corr.correlator(ipoint).rs(), new_corr.correlator(ipoint).weights()):
 			# processing only like-sign pairs when self.ENC_pair_like is on
 			if self.ENC_pair_like and (not self.is_same_charge(new_corr, ipoint, c_select, index)):
@@ -657,51 +670,51 @@ class ProcessMC_ENC(process_mc_base.ProcessMCBase):
 				continue
 
 			# observable = jet_E2C_T_RL
-			charges = np.array([c_select[index].python_info() for index in indices])
+			charges = np.array([c_select[index].python_info().charge for index in indices])
 
 			if np.all(charges > 0):
 				getattr(self, hname.format(observable_skel.format('P', ''), obs_label)).Fill(jet_pt, RL, weight)
-				getattr(self, hname.format(observable_skel.format('P', 'Pt'), obs_label)).Fill(jet_pt, jet_pt * RL, weight)
+				# getattr(self, hname.format(observable_skel.format('P', 'Pt'), obs_label)).Fill(jet_pt, jet_pt * RL, weight)
 			elif np.all(charges < 0):
 				getattr(self, hname.format(observable_skel.format('M', ''), obs_label)).Fill(jet_pt, RL, weight)
-				getattr(self, hname.format(observable_skel.format('M', 'Pt'), obs_label)).Fill(jet_pt, jet_pt * RL, weight)
+				# getattr(self, hname.format(observable_skel.format('M', 'Pt'), obs_label)).Fill(jet_pt, jet_pt * RL, weight)
 			else:
 				getattr(self, hname.format(observable_skel.format('PM', ''), obs_label)).Fill(jet_pt, RL, weight)
-				getattr(self, hname.format(observable_skel.format('PM', 'Pt'), obs_label)).Fill(jet_pt, jet_pt * RL, weight)
+				# getattr(self, hname.format(observable_skel.format('PM', 'Pt'), obs_label)).Fill(jet_pt, jet_pt * RL, weight)
 			getattr(self, hname.format(observable_skel.format('Q', ''), obs_label)).Fill(jet_pt, RL, np.prod(charges) * weight)
-			getattr(self, hname.format(observable_skel.format('Q', 'Pt'), obs_label)).Fill(jet_pt, jet_pt * RL, np.prod(charges) * weight)
+			# getattr(self, hname.format(observable_skel.format('Q', 'Pt'), obs_label)).Fill(jet_pt, jet_pt * RL, np.prod(charges) * weight)
 			getattr(self, hname.format(observable_skel.format('T', ''), obs_label)).Fill(jet_pt, RL, weight)
 
 
-		ipoint = 2
 			# print("new; ipoint 2 ", weight)
+		# NOTE: for now ignoring E3C to reduce processing time
 		# cE3C_observables = [obs for obs in self.observable_list if 'E3C' in obs]
 		# for observable in cE3C_observables:
-		ipoint = 3
-		observable_skel = "jet_E3C_{}_RL{}"
-		for indices, RL, weight in zip(new_corr.correlator(ipoint).indices(), new_corr.correlator(ipoint).rs(), new_corr.correlator(ipoint).weights()):
-			# processing only like-sign pairs when self.ENC_pair_like is on
-			if self.ENC_pair_like and (not self.is_same_charge(new_corr, ipoint, c_select, index)):
-				continue
+		# ipoint = 3
+		# observable_skel = "jet_E3C_{}_RL{}"
+		# for indices, RL, weight in zip(new_corr.correlator(ipoint).indices(), new_corr.correlator(ipoint).rs(), new_corr.correlator(ipoint).weights()):
+		# 	# processing only like-sign pairs when self.ENC_pair_like is on
+		# 	if self.ENC_pair_like and (not self.is_same_charge(new_corr, ipoint, c_select, index)):
+		# 		continue
 
-			# processing only unlike-sign pairs when self.ENC_pair_unlike is on
-			if self.ENC_pair_unlike and self.is_same_charge(new_corr, ipoint, c_select, index):
-				continue
+		# 	# processing only unlike-sign pairs when self.ENC_pair_unlike is on
+		# 	if self.ENC_pair_unlike and self.is_same_charge(new_corr, ipoint, c_select, index):
+		# 		continue
 
-			charges = np.array([c_select[index].python_info() for index in indices])
-			# if np.all(charges > 0):
-			# 	getattr(self, hname2.format('P', '')).Fill(jet_pt, RL, weight)
-			# 	getattr(self, hname2.format('P', 'Pt')).Fill(jet_pt, jet_pt * RL, weight)
-			# elif np.all(charges < 0):
-			# 	getattr(self, hname2.format('M', '')).Fill(jet_pt, RL, weight)
-			# 	getattr(self, hname2.format('M', 'Pt')).Fill(jet_pt, jet_pt * RL, weight)
-			# else:
-			# 	getattr(self, hname2.format('PM', '')).Fill(jet_pt, RL, weight)
-			# 	getattr(self, hname2.format('PM', 'Pt')).Fill(jet_pt, jet_pt * RL, weight)
-			getattr(self, hname.format(observable_skel.format('Q', ''), obs_label)).Fill(jet_pt, RL, np.prod(charges) * weight)
-			getattr(self, hname.format(observable_skel.format('Q', 'Pt'), obs_label)).Fill(jet_pt, jet_pt * RL, np.prod(charges) * weight)
-			getattr(self, hname.format(observable_skel.format('T', ''), obs_label)).Fill(jet_pt, RL, weight)
-			getattr(self, hname.format(observable_skel.format('T', 'Pt'), obs_label)).Fill(jet_pt, jet_pt * RL, weight)
+		# 	charges = np.array([c_select[index].python_info().charge for index in indices])
+		# 	# if np.all(charges > 0):
+		# 	# 	getattr(self, hname2.format('P', '')).Fill(jet_pt, RL, weight)
+		# 	# 	getattr(self, hname2.format('P', 'Pt')).Fill(jet_pt, jet_pt * RL, weight)
+		# 	# elif np.all(charges < 0):
+		# 	# 	getattr(self, hname2.format('M', '')).Fill(jet_pt, RL, weight)
+		# 	# 	getattr(self, hname2.format('M', 'Pt')).Fill(jet_pt, jet_pt * RL, weight)
+		# 	# else:
+		# 	# 	getattr(self, hname2.format('PM', '')).Fill(jet_pt, RL, weight)
+		# 	# 	getattr(self, hname2.format('PM', 'Pt')).Fill(jet_pt, jet_pt * RL, weight)
+		# 	getattr(self, hname.format(observable_skel.format('Q', ''), obs_label)).Fill(jet_pt, RL, np.prod(charges) * weight)
+		# 	getattr(self, hname.format(observable_skel.format('Q', 'Pt'), obs_label)).Fill(jet_pt, jet_pt * RL, np.prod(charges) * weight)
+		# 	getattr(self, hname.format(observable_skel.format('T', ''), obs_label)).Fill(jet_pt, RL, weight)
+		# 	getattr(self, hname.format(observable_skel.format('T', 'Pt'), obs_label)).Fill(jet_pt, jet_pt * RL, weight)
 
 	#---------------------------------------------------------------
 	# This function is called per observable per jet subconfigration
@@ -739,7 +752,10 @@ class ProcessMC_ENC(process_mc_base.ProcessMCBase):
 		if self.do_rho_subtraction and (not 'Truth' in hname):
 			jet_pt = jet_pt_ungroomed
 		else:
-			jet_pt = jet.perp()
+			if "TruthJetPt" in hname or "TruthPairs" in hname:
+				jet_pt = jet_pt_matched
+			else:
+				jet_pt = jet.perp()
 
 		new_corr = ecorrel.CorrelatorBuilder(c_select, jet_pt, 2, 1, dphi_cut, deta_cut)
 		if 'ENC' in observable or 'EEC_noweight' in observable or 'EEC_weight2' in observable:
@@ -770,6 +786,33 @@ class ProcessMC_ENC(process_mc_base.ProcessMCBase):
 							getattr(self, hname.format(observable + pair_type_label,obs_label)).Fill(jet_pt_matched, new_corr.correlator(ipoint).rs()[index], pow(new_corr.correlator(ipoint).weights()[index]*weights_pair[index],2))
 						else:
 							getattr(self, hname.format(observable + pair_type_label,obs_label)).Fill(jet_pt_matched, new_corr.correlator(ipoint).rs()[index], pow(new_corr.correlator(ipoint).weights()[index],2))
+		if 'E2C' in observable:
+			for ipoint in range(2, 3):
+				# if self.ENC_fastsim and (not 'Truth' in hname): # NB: only apply pair efficiency effect for fast sim and det level distributions
+				# 	weights_pair = self.get_pair_eff_weights(new_corr, ipoint, c_select)
+				for indices, RL, weight in zip(new_corr.correlator(ipoint).indices(), new_corr.correlator(ipoint).rs(), new_corr.correlator(ipoint).weights()):
+					pair_type_label = ''
+					if self.do_rho_subtraction or self.do_constituent_subtraction:
+						pair_type = self.check_pair_type(new_corr, ipoint, c_select, index)
+						pair_type_label = self.pair_type_labels[pair_type]
+
+					charges = np.array([c_select[index].python_info().charge for index in indices])
+					
+					if np.all(charges > 0):
+						if '_P_' in observable:
+							getattr(self, hname.format(observable + pair_type_label,obs_label)).Fill(jet_pt, RL, weight)
+					elif np.all(charges < 0):
+						if '_M_' in observable:
+							getattr(self, hname.format(observable + pair_type_label,obs_label)).Fill(jet_pt, RL, weight)
+					else:
+						if '_PM_' in observable:
+							getattr(self, hname.format(observable + pair_type_label,obs_label)).Fill(jet_pt, RL, weight)
+					
+					if "_Q_" in observable:
+						getattr(self, hname.format(observable + pair_type_label,obs_label)).Fill(jet_pt, RL, weight * np.prod(charges))
+					elif "_T_" in observable:
+						getattr(self, hname.format(observable + pair_type_label,obs_label)).Fill(jet_pt, RL, weight)
+					# getattr(self, hname.format(pair_type_label,obs_label)).Fill(jet_pt, RL, weight)
 
 		if 'jet_pt' in observable:
 			getattr(self, hname.format(observable,obs_label)).Fill(jet_pt)
@@ -778,12 +821,11 @@ class ProcessMC_ENC(process_mc_base.ProcessMCBase):
 	# This function is called per jet subconfigration
 	# Fill matched jet histograms
 	#---------------------------------------------------------------
-	def fill_matched_jet_histograms(self, jet_det, jet_det_groomed_lund, jet_truth,
-																	jet_truth_groomed_lund, jet_pp_det, jetR,
-																	obs_setting, grooming_setting, obs_label,
-																	jet_pt_det_ungroomed, jet_pt_truth_ungroomed, R_max, suffix, **kwargs):
+	def fill_matched_jet_histograms(self, jet_det, jet_det_groomed_lund, jet_truth, jet_truth_groomed_lund, jet_pp_det, jetR, obs_setting, grooming_setting, obs_label, jet_pt_det_ungroomed, jet_pt_truth_ungroomed, R_max, suffix, **kwargs):
 		# If jetscape, we will need to correct substructure observable for holes (pt is corrected in base class)
 		# For ENC in PbPb, jet_pt_det_ungroomed stores the corrected jet pT
+		if not type(jet_det.python_info().match):
+			print("type is ", type(jet_det.python_info().match))
 		if self.jetscape:
 			holes_in_det_jet = kwargs['holes_in_det_jet']
 			holes_in_truth_jet = kwargs['holes_in_truth_jet']
@@ -815,6 +857,12 @@ class ProcessMC_ENC(process_mc_base.ProcessMCBase):
 
 				hname = 'h_matched_{{}}_JetPt_Truth_R{}_{{}}'.format(jetR)
 				self.fill_matched_observable_histograms(hname, observable, jet_truth, jet_truth_groomed_lund, jetR, obs_setting, grooming_setting, obs_label, jet_pt_det, jet_truth.pt())
+
+				if "E2C" in observable:
+					hname = 'h_matched_{{}}_JetPt_TruthJetPt_R{}_{{}}'.format(jetR)
+					self.fill_matched_observable_histograms(hname, observable, jet_det, jet_truth_groomed_lund, jetR, obs_setting, grooming_setting, obs_label, jet_pt_det, jet_truth.pt())
+					hname = 'h_matched_{{}}_JetPt_TruthPairs_R{}_{{}}'.format(jetR)
+					self.fill_matched_observable_histograms(hname, observable, jet_truth, jet_truth_groomed_lund, jetR, obs_setting, grooming_setting, obs_label, jet_pt_det, jet_pt_det)
 
 				# fill RL vs matched truth jet pT for det jets (only fill these extra histograms for ENC or pair distributions)
 				if 'ENC' in observable or 'EEC_noweight' in observable or 'EEC_weight2' in observable:
