@@ -11,13 +11,12 @@ from __future__ import print_function
 # General
 import os
 import sys
-import time
 
 # Data analysis and plotting
 import ROOT
 import yaml
 import numpy as np
-from array import *
+from array import array as array
 
 # Fastjet via python (from external library heppy)
 import fastjet as fj
@@ -114,9 +113,6 @@ class ProcessBase(common_base.CommonBase):
   #---------------------------------------------------------------
   def create_thn(self, name, title, dim, nbins, xmin, xmax):
     
-    nbins_arr = (nbins)
-    xmin_arr = (min)
-    xmax_arr = (max)
     nbins_array = array('i', nbins)
     xmin_array = array('d', xmin)
     xmax_array = array('d', xmax)

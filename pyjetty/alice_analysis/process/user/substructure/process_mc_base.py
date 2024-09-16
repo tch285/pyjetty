@@ -21,33 +21,33 @@ To use this class, the following should be done:
 Author: James Mulligan (james.mulligan@berkeley.edu)
 """
 
-from __future__ import print_function
-
+# from __future__ import print_function
 # General
-import time
-
 # Data analysis and plotting
-import pandas
-import numpy as np
-from array import *
-import ROOT
-import yaml
+# Fastjet via python (from external library heppy)
+
 import random
 import sys
-import math
-
-# Fastjet via python (from external library heppy)
-import fastjet as fj
-import fjcontrib
-import fjtools
-from particle import PDGID
+import time
+from array import array as array
 
 # Analysis utilities
-from pyjetty.alice_analysis.process.base import process_io
-from pyjetty.alice_analysis.process.base import process_io_emb
-from pyjetty.alice_analysis.process.base import process_base
-from pyjetty.alice_analysis.process.base import thermal_generator
-from pyjetty.alice_analysis.process.base import jet_info
+import fastjet as fj
+import fjcontrib
+
+# import fjtools
+import numpy as np
+import pandas
+import ROOT
+import yaml
+from particle import PDGID
+from pyjetty.alice_analysis.process.base import (
+    jet_info,
+    process_base,
+    process_io,
+    process_io_emb,
+    thermal_generator,
+)
 from pyjetty.mputils.csubtractor import CEventSubtractor
 
 # Prevent ROOT from stealing focus when plotting
@@ -80,14 +80,14 @@ class ProcessMCBase(process_base.ProcessBase):
             config = yaml.safe_load(stream)
             
         self.fast_simulation = config['fast_simulation']
-        if self.fast_simulation == True:
+        if self.fast_simulation:
             if 'ENC_fastsim' in config:
                 self.ENC_fastsim = config['ENC_fastsim']
             else:
                 self.ENC_fastsim = False
         else: # if not fast simulation, set ENC_fastsim flag to False
             self.ENC_fastsim = False  
-        if self.ENC_fastsim == True:
+        if self.ENC_fastsim:
             self.pair_eff_file = config['pair_eff_file'] # load pair efficiency input for fastsim
         if 'ENC_pair_cut' in config:
             self.ENC_pair_cut = config['ENC_pair_cut']
@@ -164,7 +164,7 @@ class ProcessMCBase(process_base.ProcessBase):
         for observable in self.observable_list:
         
             obs_config_dict = config[observable]
-            obs_config_list = [name for name in list(obs_config_dict.keys()) if 'config' in name ]
+            # obs_config_list = [name for name in list(obs_config_dict.keys()) if 'config' in name ]
             
             obs_subconfig_list = [name for name in list(obs_config_dict.keys()) if 'config' in name ]
             self.obs_settings[observable] = self.utils.obs_settings(observable, obs_config_dict, obs_subconfig_list)
@@ -175,7 +175,7 @@ class ProcessMCBase(process_base.ProcessBase):
         lists_grooming = [self.obs_grooming_settings[obs] for obs in self.observable_list]
         for observable in lists_grooming:
             for setting in observable:
-                if setting not in self.grooming_settings and setting != None:
+                if setting not in self.grooming_settings and setting is not None:
                     self.grooming_settings.append(setting)
     
     #---------------------------------------------------------------
@@ -379,11 +379,14 @@ class ProcessMCBase(process_base.ProcessBase):
         # Then can use list comprehension to iterate over the groupby and do jet-finding
         # simultaneously for fj_1 and fj_2 per event, so that I can match jets -- and fill histograms
         if self.jetscape:
-            result = [self.analyze_event(fj_particles_det, fj_particles_truth, fj_particles_det_holes, fj_particles_truth_holes) for fj_particles_det, fj_particles_truth, fj_particles_det_holes, fj_particles_truth_holes in zip(self.df_fjparticles['fj_particles_det'], self.df_fjparticles['fj_particles_truth'], self.df_fjparticles['fj_particles_det_holes'], self.df_fjparticles['fj_particles_truth_holes'])]
+            # result = [self.analyze_event(fj_particles_det, fj_particles_truth, fj_particles_det_holes, fj_particles_truth_holes) for fj_particles_det, fj_particles_truth, fj_particles_det_holes, fj_particles_truth_holes in zip(self.df_fjparticles['fj_particles_det'], self.df_fjparticles['fj_particles_truth'], self.df_fjparticles['fj_particles_det_holes'], self.df_fjparticles['fj_particles_truth_holes'])]
+            [self.analyze_event(fj_particles_det, fj_particles_truth, fj_particles_det_holes, fj_particles_truth_holes) for fj_particles_det, fj_particles_truth, fj_particles_det_holes, fj_particles_truth_holes in zip(self.df_fjparticles['fj_particles_det'], self.df_fjparticles['fj_particles_truth'], self.df_fjparticles['fj_particles_det_holes'], self.df_fjparticles['fj_particles_truth_holes'])]
         elif self.ENC_fastsim:
-            result = [self.analyze_event(fj_particles_det=fj_particles_det, fj_particles_truth=fj_particles_truth, particles_mcid_det=particles_mcid_det, particles_pid_truth=particles_pid_truth) for fj_particles_det, fj_particles_truth, particles_mcid_det, particles_pid_truth in zip(self.df_fjparticles['fj_particles_det'], self.df_fjparticles['fj_particles_truth'], self.df_fjparticles['ParticleMCIndex'], self.df_fjparticles['ParticlePID'])]
+            # result = [self.analyze_event(fj_particles_det=fj_particles_det, fj_particles_truth=fj_particles_truth, particles_mcid_det=particles_mcid_det, particles_pid_truth=particles_pid_truth) for fj_particles_det, fj_particles_truth, particles_mcid_det, particles_pid_truth in zip(self.df_fjparticles['fj_particles_det'], self.df_fjparticles['fj_particles_truth'], self.df_fjparticles['ParticleMCIndex'], self.df_fjparticles['ParticlePID'])]
+            [self.analyze_event(fj_particles_det=fj_particles_det, fj_particles_truth=fj_particles_truth, particles_mcid_det=particles_mcid_det, particles_pid_truth=particles_pid_truth) for fj_particles_det, fj_particles_truth, particles_mcid_det, particles_pid_truth in zip(self.df_fjparticles['fj_particles_det'], self.df_fjparticles['fj_particles_truth'], self.df_fjparticles['ParticleMCIndex'], self.df_fjparticles['ParticlePID'])]
         else:
-            result = [self.analyze_event(fj_particles_det, fj_particles_truth) for fj_particles_det, fj_particles_truth in zip(self.df_fjparticles['fj_particles_det'], self.df_fjparticles['fj_particles_truth'])]
+            # result = [self.analyze_event(fj_particles_det, fj_particles_truth) for fj_particles_det, fj_particles_truth in zip(self.df_fjparticles['fj_particles_det'], self.df_fjparticles['fj_particles_truth'])]
+            [self.analyze_event(fj_particles_det, fj_particles_truth) for fj_particles_det, fj_particles_truth in zip(self.df_fjparticles['fj_particles_det'], self.df_fjparticles['fj_particles_truth'])]
         
         if self.debug_level > 0:
             for attr in dir(self):
@@ -719,10 +722,10 @@ class ProcessMCBase(process_base.ProcessBase):
     
         if self.debug_level > 1:
             print('Number of det-level jets: {}'.format(len(jets_det_selected)))
-        print('ANALYZING 1JETSSSSSSSSSSSSSSSSSSSSSSSSSSSS')
+        # print('analyzing a jet...')
         # Fill det-level jet histograms (before matching)
         for jet_det in jets_det_selected:
-            print('ANALYZING 2JETSSSSSSSSSSSSSSSSSSSSSSSSSSSS')
+            # print('analyzing det jets...')
             
             # Check additional acceptance criteria
             # skip event if not satisfied -- since first jet in event is highest pt
@@ -731,14 +734,14 @@ class ProcessMCBase(process_base.ProcessBase):
                     self.hNevents.Fill(0)
                 if self.debug_level > 1:
                     print('event rejected due to jet acceptance')
-                print("about to return")
-                return
+                # print("about to return")
+                # return
             
             self.fill_det_before_matching(jet_det, jetR, R_max, rho_bge)
     
         # Fill truth-level jet histograms (before matching)
         for jet_truth in jets_truth_selected:
-            print('ANALYZING 3JETSSSSSSSSSSSSSSSSSSSSSSSSSSSS')
+            # print('analyzing truth jets...')
         
             if self.is_pp or self.fill_Rmax_indep_hists:
                 self.fill_truth_before_matching(jet_truth, jetR)
@@ -760,9 +763,9 @@ class ProcessMCBase(process_base.ProcessBase):
         #     print('matches to',len(jet_det_combined.python_info().closest_jet.constituents()))
                 
         # Loop through jets and set accepted matches
-        print('checking is pp')
+        # print('checking is pp')
         if self.is_pp: #HACK: this if else commented out
-            print('checked is pp')
+            # print('checked is pp')
             hname = 'hJetMatchingQA_R{}'.format(jetR)
             if hname and not hasattr(self, hname):
                 bin_labels = ['all', 'has_matching_candidate', 'unique_match']
@@ -784,7 +787,8 @@ class ProcessMCBase(process_base.ProcessBase):
             [self.set_matches_AA(jet_det_combined, jetR, hname) for jet_det_combined in jets_det_selected]
         
         # Loop through jets and fill response histograms if both det and truth jets are unique match
-        result = [self.fill_jet_matches(jet_det, jetR, R_max, fj_particles_det_holes, fj_particles_truth_holes, rho_bge, fj_particles_det_cones, fj_particles_truth_cones) for jet_det in jets_det_selected]
+        # result = [self.fill_jet_matches(jet_det, jetR, R_max, fj_particles_det_holes, fj_particles_truth_holes, rho_bge, fj_particles_det_cones, fj_particles_truth_cones) for jet_det in jets_det_selected]
+        [self.fill_jet_matches(jet_det, jetR, R_max, fj_particles_det_holes, fj_particles_truth_holes, rho_bge, fj_particles_det_cones, fj_particles_truth_cones) for jet_det in jets_det_selected]
 
     #---------------------------------------------------------------
     # Fill some background histograms
@@ -852,10 +856,10 @@ class ProcessMCBase(process_base.ProcessBase):
     #---------------------------------------------------------------
     def fill_det_before_matching(self, jet, jetR, R_max, rho_bge = 0):
         
-        if self.is_pp or self.fill_Rmax_indep_hists:
-            jet_pt = jet.pt()
-            if self.do_rho_subtraction:
-                jet_pt = jet.pt()-rho_bge*jet.area()
+        # if self.is_pp or self.fill_Rmax_indep_hists:
+        #     jet_pt = jet.pt()
+        #     if self.do_rho_subtraction:
+        #         jet_pt = jet.pt()-rho_bge*jet.area()
             # for constituent in jet.constituents():
             #     z = constituent.pt() / jet_pt
             #     getattr(self, 'hZ_Det_R{}'.format(jetR)).Fill(jet_pt, z)
@@ -887,6 +891,7 @@ class ProcessMCBase(process_base.ProcessBase):
         observable = self.observable_list[0]
         for i in range(len(self.obs_settings[observable])):
             obs_setting = self.obs_settings[observable][i]
+            # print(hname, obs_setting)
             grooming_setting = self.obs_grooming_settings[observable][i]
             obs_label = self.utils.obs_label(obs_setting, grooming_setting)
 

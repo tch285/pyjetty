@@ -202,18 +202,18 @@ namespace EnergyCorrelators
                     idx_i = idxs_group[i];
                     for (int j = i + 1; j < ipoint; j++) {
                         idx_j = idxs_group[j];
-                        // if (ipoint == 2) {
-                        //     if (dphi_cut > -1) { // if dphi_cut is on, apply it to pairs
-                        //         double _phi12 = fabs(parts[idx_i].delta_phi_to(parts[idx_j])); // delta_phi_to returns [-pi, pi]
-                        //         int _q1 = 1; // FIXME: just dummy (no charge info available yet in data and full sim)
-                        //         int _q2 = 1;
-                        //         if ( !ApplyDeltaPhiRejection(dphi_cut, _q1, _q2, parts[idx_i].pt(), parts[idx_j].pt(), _phi12) ) continue;
-                        //     }
-                        //     if (deta_cut > -1) { // if deta_cut is on, apply it to pairs
-                        //         double _eta12 = parts[idx_i].eta() - parts[idx_j].eta();
-                        //         if ( !ApplyDeltaEtaRejection(deta_cut, _eta12) ) continue;
-                        //     }
-                        // }
+                        if (ipoint == 2) {
+                            // if (dphi_cut > -1) { // if dphi_cut is on, apply it to pairs
+                            //     double _phi12 = fabs(parts[idx_i].delta_phi_to(parts[idx_j])); // delta_phi_to returns [-pi, pi]
+                            //     int _q1 = 1; // FIXME: just dummy (no charge info available yet in data and full sim)
+                            //     int _q2 = 1;
+                            //     if ( !ApplyDeltaPhiRejection(dphi_cut, _q1, _q2, parts[idx_i].pt(), parts[idx_j].pt(), _phi12) ) continue;
+                            // }
+                            if (deta_cut > -1) { // if deta_cut is on, apply it to pairs
+                                double _eta12 = parts[idx_i].eta() - parts[idx_j].eta();
+                                if ( !ApplyDeltaEtaRejection(deta_cut, _eta12) ) continue;
+                            }
+                        }
 
                         // _deltaR = parts[idx_i].delta_R(parts[idx_j]);
                         _deltaR = std::sqrt(std::pow(parts[idx_i].delta_phi_to(parts[idx_j]), 2) + std::pow(parts[idx_i].eta() - parts[idx_j].eta(), 2));
