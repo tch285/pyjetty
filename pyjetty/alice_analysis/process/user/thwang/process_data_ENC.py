@@ -13,7 +13,7 @@ from __future__ import print_function
 import os
 import sys
 import argparse
-import sys
+# import sys
 
 # Data analysis and plotting
 import ROOT
@@ -21,11 +21,11 @@ import yaml
 import numpy as np
 import array
 import math
-import random
+# import random
 
 # Fastjet via python (from external library heppy)
 import fastjet as fj
-import fjcontrib
+# import fjcontrib
 import ecorrel
 
 # Base class
