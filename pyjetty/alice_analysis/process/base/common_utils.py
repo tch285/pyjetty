@@ -63,6 +63,8 @@ class CommonUtils(common_base.CommonBase):
       return [obs_config_dict[name]['trk_thrd'] for name in obs_subconfig_list]
     elif observable in ['jet_E2C_T_RL', 'jet_E2C_Q_RL', 'jet_E2C_P_RL', 'jet_E2C_M_RL', 'jet_E2C_PM_RL', 'jet_E3C_T_RL', 'jet_E3C_Q_RL']:
       return [obs_config_dict[name]['trk_thrd'] for name in obs_subconfig_list]
+    elif observable in ['jet_pairdist_T', 'jet_pairdist_M', 'jet_pairdist_P', 'jet_pairdist_PM']:
+      return [obs_config_dict[name]['trk_thrd'] for name in obs_subconfig_list]
 
     # Else observable not implemented
     return [None for _ in obs_subconfig_list]

@@ -417,7 +417,8 @@ class ProcessIO(common_base.CommonBase):
       # (K+ + K-) / (pi+ + pi-) ~ 13%
       # But these are numbers with respect to the final _unreplaced_ pions, so there is
       # an additional factor of 1/(1 + 5.5% + 13%) to get things right
-      K_factor = 0.13; p_factor = 0.055
+      K_factor = 0.13
+      p_factor = 0.055
       K_prob = K_factor / (1 + K_factor + p_factor)
       p_prob = 1 - p_factor / (1 + K_factor + p_factor)   # 1- just to look at diff random vals
       m_array = np.where(rand_val < K_prob, K_mass, m_array)

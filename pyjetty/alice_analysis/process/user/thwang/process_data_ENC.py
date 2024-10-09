@@ -65,6 +65,7 @@ class ProcessData_ENC(process_data_base.ProcessDataBase):
 		self.pT_bins = linbins(self.pT_min,self.pT_max,self.pT_nbins)
 		self.RL_bins = logbins(self.RL_min,self.RL_max,self.RL_nbins)
 		self.pTRL_bins = logbins(self.pTRL_min,self.pTRL_max,self.pTRL_nbins)
+		self.pTRL_bins = logbins(self.pTRL_min,self.pTRL_max,self.pTRL_nbins)
 
 
 	#---------------------------------------------------------------
@@ -144,13 +145,35 @@ class ProcessData_ENC(process_data_base.ProcessDataBase):
 							h.GetYaxis().SetTitle('R_{L}')
 							setattr(self, name, h)
 
-							name = 'h_{}Pt_JetPt_R{}_{}{}'.format(observable, jetR, trk_thrd, jet_type_label)
-							# pt_bins = linbins(0, 200, self.pT_nbins)
-							# ptRL_bins = logbins(self.pTRL_min, self.pTRL_max, self.pTRL_nbins)
-							h = ROOT.TH2D(name, name, self.pT_nbins, self.pT_bins, self.pTRL_nbins, self.pTRL_bins)
+							# name = 'h_{}Pt_JetPt_R{}_{}{}'.format(observable, jetR, trk_thrd, jet_type_label)
+							# # pt_bins = linbins(0, 200, self.pT_nbins)
+							# # ptRL_bins = logbins(self.pTRL_min, self.pTRL_max, self.pTRL_nbins)
+							# h = ROOT.TH2D(name, name, self.pT_nbins, self.pT_bins, self.pTRL_nbins, self.pTRL_bins)
+							# h.GetXaxis().SetTitle('p_{T,ch jet}')
+							# h.GetYaxis().SetTitle('p_{T,ch jet}R_{L}') # NB: y axis scaled by jet pt (applied jet by jet)
+							# setattr(self, name, h)
+
+						if 'pairdist' in observable:
+							pairdist_nbins = 100
+							pairdist_bins = linbins(-0.06, 0.06, pairdist_nbins)
+							for xaxis in ['phi', 'phistar', 'eta']:
+								name = 'h_{}_{}_JetPt_R{}_{}{}'.format(observable, xaxis, jetR, trk_thrd, jet_type_label)
+								h = ROOT.TH2D(name, name, self.pT_nbins, self.pT_bins, pairdist_nbins, pairdist_bins)
+								h.GetXaxis().SetTitle('p_{T,ch jet}')
+								h.GetYaxis().SetTitle(f'{xaxis}')
+								setattr(self, name, h)
+							name = 'h_{}_{}_JetPt_R{}_{}{}'.format(observable, 'RL', jetR, trk_thrd, jet_type_label)
+							h = ROOT.TH2D(name, name, self.pT_nbins, self.pT_bins, self.RL_nbins, self.RL_bins)
 							h.GetXaxis().SetTitle('p_{T,ch jet}')
-							h.GetYaxis().SetTitle('p_{T,ch jet}R_{L}') # NB: y axis scaled by jet pt (applied jet by jet)
+							h.GetYaxis().SetTitle('RL')
 							setattr(self, name, h)
+							name = 'h_{}_{}_JetPt_R{}_{}{}'.format(observable, 'phistar_eta', jetR, trk_thrd, jet_type_label)
+							h = ROOT.TH3F(name, name, self.pT_nbins, self.pT_bins, pairdist_nbins, pairdist_bins, pairdist_nbins, pairdist_bins)
+							h.GetXaxis().SetTitle('p_{T,ch jet}')
+							h.GetYaxis().SetTitle('phistar')
+							h.GetZaxis().SetTitle('eta')
+							setattr(self, name, h)
+
 
 					# fill perp cone histograms
 					self.pair_type_labels = ['']
@@ -265,6 +288,14 @@ class ProcessData_ENC(process_data_base.ProcessDataBase):
 		else:
 			return False
 
+	def calc_phistar(self, p1, p2, q1, q2):
+		R = 1.1 # reference radius for TPC
+		Bz = 0.5
+		phi12 = p1.delta_phi_to(p2)
+		pt1 = p1.pt()
+		pt2 = p2.pt()
+		return phi12 + q1*np.arcsin(-0.015*Bz*R/pt1) - q2*np.arcsin(-0.015*Bz*R/pt2)
+
 	def check_pair_type(self, corr_builder, ipoint, constituents, index):
 		part1 = int(corr_builder.correlator(ipoint).indices1()[index])
 		part2 = int(corr_builder.correlator(ipoint).indices2()[index])
@@ -340,60 +371,87 @@ class ProcessData_ENC(process_data_base.ProcessDataBase):
 				getattr(self, hname.format(observable, jetR, obs_label, suffix)).Fill(jet_pt)
 				getattr(self, hname.format('Nconst', jetR, obs_label, suffix)).Fill(jet_pt, nconst_jet)
 		
-		ipoint = 2
-		for indices, RL, weight in zip(new_corr.correlator(ipoint).indices(), new_corr.correlator(ipoint).rs(), new_corr.correlator(ipoint).weights()):
-			# processing only like-sign pairs when self.ENC_pair_like is on
-			if self.ENC_pair_like and (not self.is_same_charge(new_corr, ipoint, c_select, index)):
-				continue
+			if 'jet_pairdist' in observable:
+				hname = 'h_jet_pairdist_{}_{}_JetPt_R{}_{}{}'
 
-			# processing only unlike-sign pairs when self.ENC_pair_unlike is on
-			if self.ENC_pair_unlike and self.is_same_charge(new_corr, ipoint, c_select, index):
-				continue
+				ipoint = 2
+				for indices, RL, weight in zip(new_corr.correlator(ipoint).indices(), new_corr.correlator(ipoint).rs(), new_corr.correlator(ipoint).weights()):
+					idx1, idx2 = indices
+					charges = np.array([c_select[index].python_info().charge for index in indices])
+					delta_phi = c_select[idx1].delta_phi_to(c_select[idx2])
+					delta_phistar = self.calc_phistar(c_select[idx1], c_select[idx2], c_select[idx1].python_info().charge, c_select[idx2].python_info().charge)
+					delta_eta = c_select[idx1].eta() - c_select[idx2].eta()
+					applicable_pair_types = ['T']
+					if np.all(charges > 0):
+						applicable_pair_types.append('P')
+					elif np.all(charges < 0):
+						applicable_pair_types.append('M')
+					else:
+						applicable_pair_types.append('PM')
+					
+					for pair_type in applicable_pair_types:
+						getattr(self, hname.format(pair_type, 'phi', jetR, obs_label, suffix)).Fill(jet_pt, delta_phi, 1)
+						getattr(self, hname.format(pair_type, 'phistar', jetR, obs_label, suffix)).Fill(jet_pt, delta_phistar, 1)
+						getattr(self, hname.format(pair_type, 'eta', jetR, obs_label, suffix)).Fill(jet_pt, delta_eta, 1)
+						getattr(self, hname.format(pair_type, 'RL', jetR, obs_label, suffix)).Fill(jet_pt, RL, 1)
+						getattr(self, hname.format(pair_type, 'phistar_eta', jetR, obs_label, suffix)).Fill(jet_pt, delta_phistar, delta_eta, 1)
 
-			hname2 = 'h_jet_E2C_{}_RL{}_JetPt_R{}_{}{}'
-			charges = np.array([c_select[index].python_info() for index in indices])
+		cE2C_observables = [obs for obs in self.observable_list if 'E2C' in obs]
+		if len(cE2C_observables) >= 1:
+			ipoint = 2
+			for indices, RL, weight in zip(new_corr.correlator(ipoint).indices(), new_corr.correlator(ipoint).rs(), new_corr.correlator(ipoint).weights()):
+				# processing only like-sign pairs when self.ENC_pair_like is on
+				if self.ENC_pair_like and (not self.is_same_charge(new_corr, ipoint, c_select, index)):
+					continue
 
-			if np.all(charges > 0):
-				getattr(self, hname2.format('P', '', jetR, obs_label, suffix)).Fill(jet_pt, RL, weight)
-				getattr(self, hname2.format('P', 'Pt', jetR, obs_label, suffix)).Fill(jet_pt, jet_pt * RL, weight)
-			elif np.all(charges < 0):
-				getattr(self, hname2.format('M', '', jetR, obs_label, suffix)).Fill(jet_pt, RL, weight)
-				getattr(self, hname2.format('M', 'Pt', jetR, obs_label, suffix)).Fill(jet_pt, jet_pt * RL, weight)
-			else:
-				getattr(self, hname2.format('PM', '', jetR, obs_label, suffix)).Fill(jet_pt, RL, weight)
-				getattr(self, hname2.format('PM', 'Pt', jetR, obs_label, suffix)).Fill(jet_pt, jet_pt * RL, weight)
-			getattr(self, hname2.format('Q', '', jetR, obs_label, suffix)).Fill(jet_pt, RL, np.prod(charges) * weight)
-			getattr(self, hname2.format('Q', 'Pt', jetR, obs_label, suffix)).Fill(jet_pt, jet_pt * RL, np.prod(charges) * weight)
-			getattr(self, hname2.format('T', '', jetR, obs_label, suffix)).Fill(jet_pt, RL, weight)
-			getattr(self, hname2.format('T', 'Pt', jetR, obs_label, suffix)).Fill(jet_pt, jet_pt * RL, weight)
-			# print("new; ipoint 2 ", weight)
+				# processing only unlike-sign pairs when self.ENC_pair_unlike is on
+				if self.ENC_pair_unlike and self.is_same_charge(new_corr, ipoint, c_select, index):
+					continue
+
+				hname2 = 'h_jet_E2C_{}_RL{}_JetPt_R{}_{}{}'
+				charges = np.array([c_select[index].python_info().charge for index in indices])
+
+				if np.all(charges > 0):
+					getattr(self, hname2.format('P', '', jetR, obs_label, suffix)).Fill(jet_pt, RL, weight)
+					# getattr(self, hname2.format('P', 'Pt', jetR, obs_label, suffix)).Fill(jet_pt, jet_pt * RL, weight)
+				elif np.all(charges < 0):
+					getattr(self, hname2.format('M', '', jetR, obs_label, suffix)).Fill(jet_pt, RL, weight)
+					# getattr(self, hname2.format('M', 'Pt', jetR, obs_label, suffix)).Fill(jet_pt, jet_pt * RL, weight)
+				else:
+					getattr(self, hname2.format('PM', '', jetR, obs_label, suffix)).Fill(jet_pt, RL, weight)
+					# getattr(self, hname2.format('PM', 'Pt', jetR, obs_label, suffix)).Fill(jet_pt, jet_pt * RL, weight)
+				getattr(self, hname2.format('Q', '', jetR, obs_label, suffix)).Fill(jet_pt, RL, np.prod(charges) * weight)
+				# getattr(self, hname2.format('Q', 'Pt', jetR, obs_label, suffix)).Fill(jet_pt, jet_pt * RL, np.prod(charges) * weight)
+				getattr(self, hname2.format('T', '', jetR, obs_label, suffix)).Fill(jet_pt, RL, weight)
+				# getattr(self, hname2.format('T', 'Pt', jetR, obs_label, suffix)).Fill(jet_pt, jet_pt * RL, weight)
+				# print("new; ipoint 2 ", weight)
 		# cE3C_observables = [obs for obs in self.observable_list if 'E3C' in obs]
 		# for observable in cE3C_observables:
-		ipoint = 3
-		for indices, RL, weight in zip(new_corr.correlator(ipoint).indices(), new_corr.correlator(ipoint).rs(), new_corr.correlator(ipoint).weights()):
-			# processing only like-sign pairs when self.ENC_pair_like is on
-			if self.ENC_pair_like and (not self.is_same_charge(new_corr, ipoint, c_select, index)):
-				continue
+		# ipoint = 3
+		# for indices, RL, weight in zip(new_corr.correlator(ipoint).indices(), new_corr.correlator(ipoint).rs(), new_corr.correlator(ipoint).weights()):
+		# 	# processing only like-sign pairs when self.ENC_pair_like is on
+		# 	if self.ENC_pair_like and (not self.is_same_charge(new_corr, ipoint, c_select, index)):
+		# 		continue
 
-			# processing only unlike-sign pairs when self.ENC_pair_unlike is on
-			if self.ENC_pair_unlike and self.is_same_charge(new_corr, ipoint, c_select, index):
-				continue
+		# 	# processing only unlike-sign pairs when self.ENC_pair_unlike is on
+		# 	if self.ENC_pair_unlike and self.is_same_charge(new_corr, ipoint, c_select, index):
+		# 		continue
 
-			hname3 = 'h_jet_E3C_{}_RL{}_JetPt_R{}_{}{}'
-			charges = np.array([c_select[index].python_info() for index in indices])
-			# if np.all(charges > 0):
-			# 	getattr(self, hname2.format('P', '', jetR, obs_label, suffix)).Fill(jet_pt, RL, weight)
-			# 	getattr(self, hname2.format('P', 'Pt', jetR, obs_label, suffix)).Fill(jet_pt, jet_pt * RL, weight)
-			# elif np.all(charges < 0):
-			# 	getattr(self, hname2.format('M', '', jetR, obs_label, suffix)).Fill(jet_pt, RL, weight)
-			# 	getattr(self, hname2.format('M', 'Pt', jetR, obs_label, suffix)).Fill(jet_pt, jet_pt * RL, weight)
-			# else:
-			# 	getattr(self, hname2.format('PM', '', jetR, obs_label, suffix)).Fill(jet_pt, RL, weight)
-			# 	getattr(self, hname2.format('PM', 'Pt', jetR, obs_label, suffix)).Fill(jet_pt, jet_pt * RL, weight)
-			getattr(self, hname3.format('Q', '', jetR, obs_label, suffix)).Fill(jet_pt, RL, np.prod(charges) * weight)
-			getattr(self, hname3.format('Q', 'Pt', jetR, obs_label, suffix)).Fill(jet_pt, jet_pt * RL, np.prod(charges) * weight)
-			getattr(self, hname3.format('T', '', jetR, obs_label, suffix)).Fill(jet_pt, RL, weight)
-			getattr(self, hname3.format('T', 'Pt', jetR, obs_label, suffix)).Fill(jet_pt, jet_pt * RL, weight)
+		# 	hname3 = 'h_jet_E3C_{}_RL{}_JetPt_R{}_{}{}'
+		# 	charges = np.array([c_select[index].python_info() for index in indices])
+		# 	# if np.all(charges > 0):
+		# 	# 	getattr(self, hname2.format('P', '', jetR, obs_label, suffix)).Fill(jet_pt, RL, weight)
+		# 	# 	getattr(self, hname2.format('P', 'Pt', jetR, obs_label, suffix)).Fill(jet_pt, jet_pt * RL, weight)
+		# 	# elif np.all(charges < 0):
+		# 	# 	getattr(self, hname2.format('M', '', jetR, obs_label, suffix)).Fill(jet_pt, RL, weight)
+		# 	# 	getattr(self, hname2.format('M', 'Pt', jetR, obs_label, suffix)).Fill(jet_pt, jet_pt * RL, weight)
+		# 	# else:
+		# 	# 	getattr(self, hname2.format('PM', '', jetR, obs_label, suffix)).Fill(jet_pt, RL, weight)
+		# 	# 	getattr(self, hname2.format('PM', 'Pt', jetR, obs_label, suffix)).Fill(jet_pt, jet_pt * RL, weight)
+		# 	getattr(self, hname3.format('Q', '', jetR, obs_label, suffix)).Fill(jet_pt, RL, np.prod(charges) * weight)
+		# 	getattr(self, hname3.format('Q', 'Pt', jetR, obs_label, suffix)).Fill(jet_pt, jet_pt * RL, np.prod(charges) * weight)
+		# 	getattr(self, hname3.format('T', '', jetR, obs_label, suffix)).Fill(jet_pt, RL, weight)
+		# 	getattr(self, hname3.format('T', 'Pt', jetR, obs_label, suffix)).Fill(jet_pt, jet_pt * RL, weight)
 
 	#---------------------------------------------------------------
 	# This function is called once for each jet subconfiguration

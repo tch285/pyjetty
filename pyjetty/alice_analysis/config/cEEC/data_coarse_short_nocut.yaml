@@ -20,14 +20,12 @@ debug_level: 0
 dry_run: False
 fast_simulation: False
 ENC_fastsim: False # only set to True when fast_simulation is set to True
-ENC_pair_cut: True
+ENC_pair_cut: False
 
 # new additions by Tucker
 RL_binning: [1.0E-3, 1, 30] # the period is important as otherwise PyYAML will read it as a string
 pT_binning: [0, 200, 200]
 pTRL_binning: [1.0E-3, 1.0E+2, 60]
-deta_cut = 0.008
-dphistar_cut = 0.003
 
 # Observable block
 jet_ENC_RL:
