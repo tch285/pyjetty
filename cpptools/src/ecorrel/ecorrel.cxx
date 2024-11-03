@@ -344,7 +344,7 @@ namespace EnergyCorrelators
     {
         double R = 1.1; // reference radius for TPC
         double Bz = 0.5;
-        double phi_star = phi12 + q1*asin(-0.015*Bz*R/pt1) - q2*asin(-0.015*Bz*R/pt2);
+        double phi_star = phi12 + q1*asin(-0.15*Bz*R/pt1) - q2*asin(-0.15*Bz*R/pt2);
         if ( fabs(phi_star)<dphi_cut ) return false;  
         return true;
     }

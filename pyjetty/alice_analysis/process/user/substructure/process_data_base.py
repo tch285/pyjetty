@@ -166,6 +166,7 @@ class ProcessDataBase(process_base.ProcessBase):
                               is_pp=self.is_pp, use_ev_id_ext=True)
     self.df_fjparticles = io.load_data(m=self.m)
     self.nEvents = len(self.df_fjparticles.index)
+    print(f'===============foud {self.nEvents}')
     self.nTracks = len(io.track_df.index)
     print('--- {} seconds ---'.format(time.time() - self.start_time))
     

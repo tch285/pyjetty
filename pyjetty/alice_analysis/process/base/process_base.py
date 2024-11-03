@@ -27,6 +27,18 @@ from pyjetty.alice_analysis.process.base import common_base
 from pyjetty.alice_analysis.process.base import process_utils
 from pyjetty.alice_analysis.process.base import jet_info
 
+import logging
+logger = logging.getLogger(__name__)
+handler = logging.StreamHandler()
+handler.setLevel(logging.INFO)
+
+# Create a formatter and set it for the handler
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(funcName)s - %(message)s')
+handler.setFormatter(formatter)
+
+logger.addHandler(handler)
+logger.setLevel(logging.INFO)
+
 ################################################################
 class ProcessBase(common_base.CommonBase):
 
@@ -69,13 +81,13 @@ class ProcessBase(common_base.CommonBase):
     else:
       self.event_number_max = sys.maxsize
       
-    self.jetR_list = config['jetR']
+    self.jetR_list = config['jetR'] # NOTE: unfolding this line removed
     self.debug_level = config['debug_level']
 
     # Check if constituent subtractor is included, and initialize it if so
     self.do_constituent_subtraction = False
     if 'constituent_subtractor' in config:
-      print('Constituent subtractor is enabled.')
+      logger.info('Constituent subtractor is enabled.')
       self.do_constituent_subtraction = True
       constituent_subtractor = config['constituent_subtractor']
       
@@ -87,7 +99,7 @@ class ProcessBase(common_base.CommonBase):
       self.max_pt_correct = constituent_subtractor['max_pt_correct']
       self.ghost_area = constituent_subtractor['ghost_area']
     else:
-      print('Constituent subtractor is disabled.')
+      logger.info('Constituent subtractor is disabled.')
       
     # Set reclustering algorithm (optional)
     if 'reclustering_algorithm' in config:
@@ -194,7 +206,7 @@ class ProcessBase(common_base.CommonBase):
       # print('debug7.2--matched pt',jet_user_info.closest_jet.pt())
       # print('debug7.2--matched constituents size',len(jet_user_info.closest_jet.constituents()))
           
-    last_jet=len(jet_user_info.matching_candidates)
+    # last_jet=len(jet_user_info.matching_candidates)
     jet.set_python_info(jet_user_info)
     # print('debug7.3--jet',jet.pt(),'size',len(jet.constituents()),'matches to jet_match',jet_match.pt(),'size',len(jet_match.constituents()))
     # print('debug7.3--matched pt',jet.python_info().closest_jet.pt())
@@ -413,10 +425,10 @@ class ProcessBase(common_base.CommonBase):
       obj = getattr(self, attr)
 
       # Write all ROOT histograms and trees to file
-      types = (ROOT.TH1, ROOT.THnBase, ROOT.TTree)
+      types = (ROOT.TH1, ROOT.THnBase, ROOT.TTree, ROOT.RooUnfoldResponse)
       if isinstance(obj, types):
         obj.Write()
-  
+    fout.Write() # NOTE: unfolding extra line
     fout.Close()
 
   #---------------------------------------------------------------

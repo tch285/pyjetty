@@ -20,13 +20,24 @@ import pandas
 import numpy as np
 
 # Fastjet via python (from external library fjpydev)
-import fastjet as fj
+# import fastjet as fj
 import fjext
-from particle import PDGID
+import logging
 
 # Base class
 from pyjetty.alice_analysis.process.base import common_base
 from pyjetty.alice_analysis.process.base import jet_info
+
+logger = logging.getLogger(__name__)
+handler = logging.StreamHandler()
+handler.setLevel(logging.INFO)
+
+# Create a formatter and set it for the handler
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(funcName)s - %(message)s')
+handler.setFormatter(formatter)
+
+logger.addHandler(handler)
+logger.setLevel(logging.INFO)
 
 ################################################################
 class ProcessIO(common_base.CommonBase):
@@ -86,7 +97,7 @@ class ProcessIO(common_base.CommonBase):
       else:
         self.track_columns += ['ParticlePID']
     else:
-      self.track_columns += ['ParticleCharge']
+      self.track_columns += ['ParticleCharge', 'ParticleMCid']
     
     #print(self)
     
@@ -109,21 +120,23 @@ class ProcessIO(common_base.CommonBase):
     self.reject_tracks_fraction = reject_tracks_fraction
     self.reset_dataframes()
 
-    print('Convert ROOT trees to pandas dataframes...')
-    print('    track_tree_name = {}'.format(self.track_tree_name))
+    logger.info('Converting ROOT trees to pandas dataframes...')
+    logger.info(f'Track TTree name = {self.track_tree_name}')
+    self.charge_factor = 1 if self.is_det_level and not self.is_ENC else 3 # NOTE: should be careful with herwig
+    # self.charge_factor = 1
+    logger.info(f"Charge normalization factor set to {self.charge_factor}.")
 
     self.track_df = self.load_dataframe()
     
     if self.reject_tracks_fraction > 1e-3:
       n_remove = int(reject_tracks_fraction * len(self.track_df.index))
-      print('    Removing {} of {} tracks from {}'.format(
-        n_remove, len(self.track_df.index), self.track_tree_name))
+      logger.warning(f'Removing {n_remove} of {len(self.track_df.index)} tracks from {self.track_tree_name}.')
       np.random.seed()
       indices_remove = np.random.choice(self.track_df.index, n_remove, replace=False)
       self.track_df.drop(indices_remove, inplace=True)
 
     if random_mass:
-      print('    \033[93mRandomly assigning proton and kaon mass to some tracks.\033[0m') 
+      logger.warning('Randomly assigning proton and kaon mass to some tracks.')
 
     df_fjparticles = self.group_fjparticles(m, offset_indices, group_by_evid, random_mass, min_pt=min_pt)
 
@@ -139,12 +152,10 @@ class ProcessIO(common_base.CommonBase):
 
     # Load event tree into dataframe
     if not self.skip_event_tree:
-      event_tree = None
+      # event_tree = None
       event_df = None
       event_tree_name = self.tree_dir + self.event_tree_name
       with uproot.open(self.input_file)[event_tree_name] as event_tree:
-        if not event_tree:
-          raise ValueError("Tree %s not found in file %s" % (event_tree_name, self.input_file))
         self.event_df_orig = uproot.concatenate(event_tree, self.event_columns, library="pd")
     
       # Check if there are duplicated event ids
@@ -168,12 +179,9 @@ class ProcessIO(common_base.CommonBase):
       event_df.reset_index(drop=True)
 
     # Load track tree into dataframe
-    track_tree = None
     track_df_orig = None
     track_tree_name = self.tree_dir + self.track_tree_name
     with uproot.open(self.input_file)[track_tree_name] as track_tree:
-      if not track_tree:
-        raise ValueError("Tree %s not found in file %s" % (track_tree_name, self.input_file))
       track_df_orig = uproot.concatenate(track_tree, self.track_columns, library="pd")
     
     # Apply hole selection, in case of jetscape
@@ -318,20 +326,18 @@ class ProcessIO(common_base.CommonBase):
   #---------------------------------------------------------------
   def group_fjparticles(self, m, offset_indices=False, group_by_evid=True, random_mass=False, min_pt=0.):
 
-    print('is_ENC on?',self.is_ENC)
-    print('is_det on?',self.is_det_level)
-    print('Track df:')
-    print(self.track_df)
+    logger.info(f'is_ENC on: {self.is_ENC}')
+    logger.info(f'Detector level: {self.is_det_level}')
+    logger.debug(f'Track df:\n{self.track_df}')
     if group_by_evid:
-      print("Transform the track dataframe into a series object of fastjet particles per event...")
+      logger.info("Transforming the track DataFrame into a Series object of FJ particles per event...")
 
       # (i) Group the track dataframe by event
       #     track_df_grouped is a DataFrameGroupBy object with one track dataframe per event
-      track_df_grouped = None
+      # track_df_grouped = None
       track_df_grouped = self.track_df.groupby(self.unique_identifier)
-      # print('debug2',type(track_df_grouped))
-      print('debug2')
-      print(track_df_grouped.aggregate(np.sum))
+      # logger.info('debug2',type(track_df_grouped))
+      logger.debug(track_df_grouped.aggregate('sum'))
       # print(track_df_grouped)
       # print('debug2',track_df_grouped.columns['ParticlePID'].values)
     
@@ -362,15 +368,15 @@ class ProcessIO(common_base.CommonBase):
         df_fjparticles = track_df_grouped.apply(
         self.get_fjparticles, m=m, offset_indices=offset_indices, random_mass=random_mass, min_pt=min_pt)
       
-      print('debug4, combined: ')
-      print(df_fjparticles)
+      logger.debug(f'Combined:\n{df_fjparticles}')
+      logger.debug(df_fjparticles)
       
       # df_fjparticles = pandas.DataFrame({"fj_particle": track_df_grouped.apply(
       #   self.get_fjparticles, m=m, offset_indices=offset_indices, random_mass=random_mass, min_pt=min_pt), "ParticleMCIndex": track_df_grouped["ParticleMCIndex"]})
       
     
     else:
-      print("Transform the track dataframe into a dataframe of fastjet particles per track...")
+      logger.info("Transforming the track DataFrame into a DataFrame of FJ particles per track...")
 
       # Transform into a DataFrame of fastjet particles
       # if it's for energy correlator analysis, add particle id and associated MC info for truth and det level input respectively
@@ -428,8 +434,6 @@ class ProcessIO(common_base.CommonBase):
     fj_particles = fjext.vectorize_pt_eta_phi_m(
       df_tracks_accepted['ParticlePt'].values, df_tracks_accepted['ParticleEta'].values,
       df_tracks_accepted['ParticlePhi'].values, m_array, user_index_offset)
-    if isinstance(fj_particles, float):
-      print('fj_particles FLOAT FOUND')
     if self.is_ENC:
       pass
       # if self.is_det_level:
@@ -441,13 +445,12 @@ class ProcessIO(common_base.CommonBase):
       #     charge = PDGID(pid).charge
       #     fj_particles[i].set_python_info(int(charge))
     else:
-      for i, charge in enumerate(df_tracks_accepted['ParticleCharge'].values):
+      
+      for i, (charge, mcid) in enumerate(zip(df_tracks_accepted['ParticleCharge'].values, df_tracks_accepted['ParticleMCid'].values)):
         info = jet_info.JetInfo()
-        info.charge = charge
+        info.charge = charge / self.charge_factor
+        info.mcid = mcid
         fj_particles[i].set_python_info(info)
-      # print("in set loop", fj_particles[i].python_info())
-    # for particle in fj_particles:
-    #   print("out of set loop", particle.python_info())
     return fj_particles
     # if self.is_ENC:
     #   if self.is_det_level:
@@ -463,14 +466,13 @@ class ProcessIO(common_base.CommonBase):
   def get_particles_mc_index(self, df_tracks, m, offset_indices=False, random_mass=False, min_pt=0.):
     
     # If offset_indices is true, then offset the user_index by a large negative value
-    user_index_offset = 0
-    if offset_indices:
-        user_index_offset = int(-1e6)
+    # NOTE: commented out this section, doesn't seem used
+    # user_index_offset = 0
+    # if offset_indices:
+    #     user_index_offset = int(-1e6)
         
     # Apply a pt cut
     df_tracks_accepted = df_tracks[df_tracks.ParticlePt > min_pt]
-
-    m_array = np.full((df_tracks_accepted['ParticlePt'].values.size), m)
 
     return df_tracks_accepted['ParticleMCIndex'].values
 
@@ -480,13 +482,11 @@ class ProcessIO(common_base.CommonBase):
   def get_particles_pid(self, df_tracks, m, offset_indices=False, random_mass=False, min_pt=0.):
     
     # If offset_indices is true, then offset the user_index by a large negative value
-    user_index_offset = 0
-    if offset_indices:
-        user_index_offset = int(-1e6)
+    # user_index_offset = 0
+    # if offset_indices:
+    #     user_index_offset = int(-1e6)
         
     # Apply a pt cut
     df_tracks_accepted = df_tracks[df_tracks.ParticlePt > min_pt]
-
-    m_array = np.full((df_tracks_accepted['ParticlePt'].values.size), m)
 
     return df_tracks_accepted['ParticlePID'].values

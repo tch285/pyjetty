@@ -28,6 +28,8 @@ class JetInfo(common_base.CommonBase):
 
     # Store the associated truth info and particle charge (used primarily for applying pair efficeincy in the fast simulation)
     self.particle_truth = None
+    self.particle_det = None
+    self.mcid = None
     self.charge= 1000.
 
   def clear_jet_info(self):
@@ -38,6 +40,7 @@ class JetInfo(common_base.CommonBase):
 
   def clear_part_info(self):
     self.particle_truth = None
+    self.particle_det = None
     self.charge= 1000.
 
   def clear(self):
@@ -47,4 +50,5 @@ class JetInfo(common_base.CommonBase):
     self.match = None
     
     self.particle_truth = None
+    self.particle_det = None
     self.charge= 1000.

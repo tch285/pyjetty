@@ -41,6 +41,9 @@ def logbins(xmin, xmax, nbins):
 	arr = array.array('f', lspace)
 	return arr
 
+ROOT.TH1.SetDefaultSumw2()
+ROOT.TH2.SetDefaultSumw2()
+
 ################################################################
 class ProcessData_ENC(process_data_base.ProcessDataBase):
 
@@ -66,6 +69,9 @@ class ProcessData_ENC(process_data_base.ProcessDataBase):
 		self.RL_bins = logbins(self.RL_min,self.RL_max,self.RL_nbins)
 		self.pTRL_bins = logbins(self.pTRL_min,self.pTRL_max,self.pTRL_nbins)
 		self.pTRL_bins = logbins(self.pTRL_min,self.pTRL_max,self.pTRL_nbins)
+		if "kT_binning" in config.keys():
+			self.kT_min, self.kT_max, self.kT_nbins = config["kT_binning"]
+			self.kT_bins = linbins(self.kT_min,self.kT_max,self.kT_nbins)
 
 
 	#---------------------------------------------------------------
@@ -156,23 +162,24 @@ class ProcessData_ENC(process_data_base.ProcessDataBase):
 						if 'pairdist' in observable:
 							pairdist_nbins = 100
 							pairdist_bins = linbins(-0.06, 0.06, pairdist_nbins)
-							for xaxis in ['phi', 'phistar', 'eta']:
-								name = 'h_{}_{}_JetPt_R{}_{}{}'.format(observable, xaxis, jetR, trk_thrd, jet_type_label)
-								h = ROOT.TH2D(name, name, self.pT_nbins, self.pT_bins, pairdist_nbins, pairdist_bins)
-								h.GetXaxis().SetTitle('p_{T,ch jet}')
-								h.GetYaxis().SetTitle(f'{xaxis}')
+							for xaxis, (x_nbins, x_bins), xtitle in zip(['JetPt', 'PairKt'], [(self.pT_nbins, self.pT_bins), (self.kT_nbins, self.kT_bins)], ['p_{T,ch jet}', 'pair k_{T}']):
+								for yaxis, ytitle in zip(['phi', 'phistar', 'eta'], ['#phi', '#phi*', '#eta']):
+									name = 'h_{}_{}_{}_R{}_{}{}'.format(observable, yaxis, xaxis, jetR, trk_thrd, jet_type_label)
+									h = ROOT.TH2D(name, name, x_nbins, x_bins, pairdist_nbins, pairdist_bins)
+									h.GetXaxis().SetTitle(xtitle)
+									h.GetYaxis().SetTitle(ytitle)
+									setattr(self, name, h)
+								name = 'h_{}_{}_{}_R{}_{}{}'.format(observable, 'RL', xaxis, jetR, trk_thrd, jet_type_label)
+								h = ROOT.TH2D(name, name, x_nbins, x_bins, self.RL_nbins, self.RL_bins)
+								h.GetXaxis().SetTitle(xtitle)
+								h.GetYaxis().SetTitle('R_{L}')
 								setattr(self, name, h)
-							name = 'h_{}_{}_JetPt_R{}_{}{}'.format(observable, 'RL', jetR, trk_thrd, jet_type_label)
-							h = ROOT.TH2D(name, name, self.pT_nbins, self.pT_bins, self.RL_nbins, self.RL_bins)
-							h.GetXaxis().SetTitle('p_{T,ch jet}')
-							h.GetYaxis().SetTitle('RL')
-							setattr(self, name, h)
-							name = 'h_{}_{}_JetPt_R{}_{}{}'.format(observable, 'phistar_eta', jetR, trk_thrd, jet_type_label)
-							h = ROOT.TH3F(name, name, self.pT_nbins, self.pT_bins, pairdist_nbins, pairdist_bins, pairdist_nbins, pairdist_bins)
-							h.GetXaxis().SetTitle('p_{T,ch jet}')
-							h.GetYaxis().SetTitle('phistar')
-							h.GetZaxis().SetTitle('eta')
-							setattr(self, name, h)
+								name = 'h_{}_{}_{}_R{}_{}{}'.format(observable, 'phistar_eta', xaxis, jetR, trk_thrd, jet_type_label)
+								h = ROOT.TH3F(name, name, x_nbins, x_bins, pairdist_nbins, pairdist_bins, pairdist_nbins, pairdist_bins)
+								h.GetXaxis().SetTitle(xtitle)
+								h.GetYaxis().SetTitle('#phi*')
+								h.GetZaxis().SetTitle('#eta')
+								setattr(self, name, h)
 
 
 					# fill perp cone histograms
@@ -372,29 +379,44 @@ class ProcessData_ENC(process_data_base.ProcessDataBase):
 				getattr(self, hname.format('Nconst', jetR, obs_label, suffix)).Fill(jet_pt, nconst_jet)
 		
 			if 'jet_pairdist' in observable:
-				hname = 'h_jet_pairdist_{}_{}_JetPt_R{}_{}{}'
+				if  '_PM' in observable:
+					obs_type = "PM"
+				elif  '_M' in observable:
+					obs_type = "M"
+				elif  '_P' in observable:
+					obs_type = "P"
+				elif '_T'in observable:
+					obs_type = "T"
+				else:
+					raise ValueError(f"couldn't determine obs type from {observable}")
+
+				hname = 'h_jet_pairdist_{}_{}_{}_R{}_{}{}'
 
 				ipoint = 2
 				for indices, RL, weight in zip(new_corr.correlator(ipoint).indices(), new_corr.correlator(ipoint).rs(), new_corr.correlator(ipoint).weights()):
 					idx1, idx2 = indices
+					if idx1 <= idx2:
+						continue
 					charges = np.array([c_select[index].python_info().charge for index in indices])
 					delta_phi = c_select[idx1].delta_phi_to(c_select[idx2])
 					delta_phistar = self.calc_phistar(c_select[idx1], c_select[idx2], c_select[idx1].python_info().charge, c_select[idx2].python_info().charge)
 					delta_eta = c_select[idx1].eta() - c_select[idx2].eta()
-					applicable_pair_types = ['T']
+					pair_kt = (c_select[idx1].pt() + c_select[idx2].pt()) / 2
+
 					if np.all(charges > 0):
-						applicable_pair_types.append('P')
+						pair_type = "P"
 					elif np.all(charges < 0):
-						applicable_pair_types.append('M')
+						pair_type = "M"
 					else:
-						applicable_pair_types.append('PM')
-					
-					for pair_type in applicable_pair_types:
-						getattr(self, hname.format(pair_type, 'phi', jetR, obs_label, suffix)).Fill(jet_pt, delta_phi, 1)
-						getattr(self, hname.format(pair_type, 'phistar', jetR, obs_label, suffix)).Fill(jet_pt, delta_phistar, 1)
-						getattr(self, hname.format(pair_type, 'eta', jetR, obs_label, suffix)).Fill(jet_pt, delta_eta, 1)
-						getattr(self, hname.format(pair_type, 'RL', jetR, obs_label, suffix)).Fill(jet_pt, RL, 1)
-						getattr(self, hname.format(pair_type, 'phistar_eta', jetR, obs_label, suffix)).Fill(jet_pt, delta_phistar, delta_eta, 1)
+						pair_type = "PM"
+
+					if obs_type == "T" or pair_type == obs_type:
+						for xaxis, xval in zip(["JetPt", "PairKt"], [jet.pt(), pair_kt]):
+							getattr(self, hname.format(obs_type, 'phi',         xaxis, jetR, obs_label, suffix)).Fill(xval, delta_phi, 1)
+							getattr(self, hname.format(obs_type, 'phistar',     xaxis, jetR, obs_label, suffix)).Fill(xval, delta_phistar, 1)
+							getattr(self, hname.format(obs_type, 'eta',         xaxis, jetR, obs_label, suffix)).Fill(xval, delta_eta, 1)
+							getattr(self, hname.format(obs_type, 'RL',          xaxis, jetR, obs_label, suffix)).Fill(xval, RL, 1)
+							getattr(self, hname.format(obs_type, 'phistar_eta', xaxis, jetR, obs_label, suffix)).Fill(xval, delta_phistar, delta_eta, 1)
 
 		cE2C_observables = [obs for obs in self.observable_list if 'E2C' in obs]
 		if len(cE2C_observables) >= 1:
