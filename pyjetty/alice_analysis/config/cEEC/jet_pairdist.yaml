@@ -12,7 +12,7 @@
 
 # process_observables: ['jet_ENC_RL', 'jet_pt', 'jet_E2C_T_RL', 'jet_E2C_Q_RL', 'jet_E3C_T_RL', 'jet_E3C_Q_RL', 'jet_E2C_P_RL', 'jet_E2C_M_RL', 'jet_E2C_PM_RL']
 # process_observables: ['jet_pt', 'jet_E2C_T_RL', 'jet_E2C_Q_RL', 'jet_E2C_P_RL', 'jet_E2C_M_RL', 'jet_E2C_PM_RL']
-process_observables: ['jet_pt', 'jet_pairdist_T', 'jet_pairdist_P', 'jet_pairdist_M', 'jet_pairdist_PM'] # 'phi, phistar', 'eta', 'RL', 'phistar_eta'
+process_observables: ['jet_pairdist_T', 'jet_pairdist_P', 'jet_pairdist_M', 'jet_pairdist_PM'] # 'phi, phistar', 'eta', 'RL', 'phistar_eta'
 jetR: [0.4]
 jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
 reject_tracks_fraction: 0
@@ -27,7 +27,8 @@ ENC_pair_cut: False
 RL_binning: [1.0E-3, 1, 30] # the period is important as otherwise PyYAML will read it as a string
 pT_binning: [0, 200, 200]
 pTRL_binning: [1.0E-3, 1.0E+2, 60]
-kT_binning: [0, 10, 50]
+kT_binning: [0, 10, 100]
+pairdist_binning: [-0.2, 0.2, 200]
 
 # Observable block
 jet_pairdist_T:
@@ -41,7 +42,7 @@ jet_pairdist_T:
       - ['config1', 'config2', 'config3']
       
   config2:
-    trk_thrd: 1.0
+    trk_thrd: 0.001
     pt_bins_truth: [5, 20, 40, 60, 80, 120, 150, 200]
     pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120, 150]
     pt_bins_det_sys_truncation: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120]
@@ -61,7 +62,7 @@ jet_pairdist_P:
       - ['config1', 'config2', 'config3']
       
   config2:
-    trk_thrd: 1.0
+    trk_thrd: 0.001
     pt_bins_truth: [5, 20, 40, 60, 80, 120, 150, 200]
     pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120, 150]
     pt_bins_det_sys_truncation: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120]
@@ -81,7 +82,7 @@ jet_pairdist_M:
       - ['config1', 'config2', 'config3']
       
   config2:
-    trk_thrd: 1.0
+    trk_thrd: 0.001
     pt_bins_truth: [5, 20, 40, 60, 80, 120, 150, 200]
     pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120, 150]
     pt_bins_det_sys_truncation: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120]
@@ -101,7 +102,7 @@ jet_pairdist_PM:
       - ['config1', 'config2', 'config3']
       
   config2:
-    trk_thrd: 1.0
+    trk_thrd: 0.001
     pt_bins_truth: [5, 20, 40, 60, 80, 120, 150, 200]
     pt_bins_det: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120, 150]
     pt_bins_det_sys_truncation: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100, 120]
