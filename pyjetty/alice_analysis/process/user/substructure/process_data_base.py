@@ -139,7 +139,7 @@ class ProcessDataBase(process_base.ProcessBase):
     for observable in self.observable_list:
     
       obs_config_dict = config[observable]
-      obs_config_list = [name for name in list(obs_config_dict.keys()) if 'config' in name ]
+      # obs_config_list = [name for name in list(obs_config_dict.keys()) if 'config' in name ]
       
       obs_subconfig_list = [name for name in list(obs_config_dict.keys()) if 'config' in name ]
       self.obs_settings[observable] = self.utils.obs_settings(observable, obs_config_dict, obs_subconfig_list)
@@ -150,7 +150,7 @@ class ProcessDataBase(process_base.ProcessBase):
     lists_grooming = [self.obs_grooming_settings[obs] for obs in self.observable_list]
     for observable in lists_grooming:
       for setting in observable:
-        if setting not in self.grooming_settings and setting != None:
+        if setting not in self.grooming_settings and setting is not None:
           self.grooming_settings.append(setting)
           
   #---------------------------------------------------------------
@@ -163,7 +163,7 @@ class ProcessDataBase(process_base.ProcessBase):
     # Use IO helper class to convert ROOT TTree into a SeriesGroupBy object of fastjet particles per event
     print('--- {} seconds ---'.format(time.time() - self.start_time))
     io = process_io.ProcessIO(input_file=self.input_file, track_tree_name='tree_Particle',
-                              is_pp=self.is_pp, use_ev_id_ext=True)
+                              is_pp=self.is_pp, use_ev_id_ext=True, is_mc = False)
     self.df_fjparticles = io.load_data(m=self.m)
     self.nEvents = len(self.df_fjparticles.index)
     print(f'===============foud {self.nEvents}')
@@ -233,7 +233,7 @@ class ProcessDataBase(process_base.ProcessBase):
     self.event_number = 0
   
     # Use list comprehension to do jet-finding and fill histograms
-    result = [self.analyze_event(fj_particles) for fj_particles in self.df_fjparticles]
+    [self.analyze_event(fj_particles) for fj_particles in self.df_fjparticles]
     
     print('--- {} seconds ---'.format(time.time() - self.start_time))
     print('Save thn...')
@@ -356,7 +356,7 @@ class ProcessDataBase(process_base.ProcessBase):
       is_jet_selected = True
       
       # leading track selection
-      if self.leading_pt > 0 and is_perp == False:
+      if self.leading_pt > 0 and not is_perp:
         constituents = fj.sorted_by_pt(jet.constituents())
         if constituents[0].perp() < self.leading_pt:
           is_jet_selected = False
@@ -417,16 +417,16 @@ class ProcessDataBase(process_base.ProcessBase):
       suffix = '{}{}'.format(R_max_label, dijet_xj_label)
 
       if self.leading_jet: # leading
-        result = self.analyze_accepted_jet(dijets[0], jetR, suffix, rho_bge)
+        self.analyze_accepted_jet(dijets[0], jetR, suffix, rho_bge)
       else: # subleading
-        result = self.analyze_accepted_jet(dijets[1], jetR, suffix, rho_bge)
+        self.analyze_accepted_jet(dijets[1], jetR, suffix, rho_bge)
     
     else:
 
       # Set suffix for filling histograms
       suffix = '{}'.format(R_max_label)
 
-      result = [self.analyze_accepted_jet(jet, jetR, suffix, rho_bge) for jet in jets_reselected]
+      [self.analyze_accepted_jet(jet, jetR, suffix, rho_bge) for jet in jets_reselected]
 
   #---------------------------------------------------------------
   # Fill histograms
