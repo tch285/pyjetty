@@ -225,7 +225,7 @@ class ProcessMC_ENC(process_mc_base.ProcessMCBase):
 	# 	return phi12 + q1*np.arcsin(0.015*Bz*R/pt1) - q2*np.arcsin(0.015*Bz*R/pt2)
 	def calc_phistar(self, p1, p2, q1, q2):
 		R = 1.1 # reference radius for TPC
-		Bz = 0.5
+		Bz = -0.5 # extra minus
 		dalpha = q1*np.arcsin(-0.15*Bz*R/p1.pt()) - q2*np.arcsin(-0.15*Bz*R/p2.pt())
 
 		return self.calculate_dphi(p1.phi(), p2.phi()) + dalpha
@@ -801,7 +801,7 @@ class ProcessMC_ENC(process_mc_base.ProcessMCBase):
 				p1 = parts_truth[i1]
 				p2 = parts_truth[i2]
 				charges = np.array([p1.python_info().charge, p2.python_info().charge])
-				delta_phi = p1.delta_phi_to(p2)
+				# delta_phi = p1.delta_phi_to(p2)
 				delta_phistar = self.calc_phistar(p1, p2, p1.python_info().charge, p2.python_info().charge)
 				delta_eta = p2.eta() - p1.eta()
 				# RL = np.sqrt(delta_phi ** 2 + delta_eta ** 2)
@@ -817,18 +817,18 @@ class ProcessMC_ENC(process_mc_base.ProcessMCBase):
 					pair_type = "PM"
 
 				for pair_kind in ["T", pair_type]:
-					getattr(self, hname.format(pair_kind, "phi",         "_Truth")).Fill(pair_kt, delta_phi)
-					getattr(self, hname.format(pair_kind, "phistar",     "_Truth")).Fill(pair_kt, delta_phistar)
-					getattr(self, hname.format(pair_kind, "eta",         "_Truth")).Fill(pair_kt, delta_eta)
-					getattr(self, hname.format(pair_kind, "RL",          "_Truth")).Fill(pair_kt, RL)
+					# getattr(self, hname.format(pair_kind, "phi",         "_Truth")).Fill(pair_kt, delta_phi)
+					# getattr(self, hname.format(pair_kind, "phistar",     "_Truth")).Fill(pair_kt, delta_phistar)
+					# getattr(self, hname.format(pair_kind, "eta",         "_Truth")).Fill(pair_kt, delta_eta)
+					# getattr(self, hname.format(pair_kind, "RL",          "_Truth")).Fill(pair_kt, RL)
 					getattr(self, hname.format(pair_kind, "phistar_eta", "_Truth")).Fill(pair_kt, delta_phistar, delta_eta)
 				
 				if p1.python_info().particle_det is not None and p2.python_info().particle_det is not None:
 					for pair_kind in ["T", pair_type]:
-						getattr(self, hname.format(pair_kind, "phi",         "")).Fill(pair_kt, delta_phi)
-						getattr(self, hname.format(pair_kind, "phistar",     "")).Fill(pair_kt, delta_phistar)
-						getattr(self, hname.format(pair_kind, "eta",         "")).Fill(pair_kt, delta_eta)
-						getattr(self, hname.format(pair_kind, "RL",          "")).Fill(pair_kt, RL)
+						# getattr(self, hname.format(pair_kind, "phi",         "")).Fill(pair_kt, delta_phi)
+						# getattr(self, hname.format(pair_kind, "phistar",     "")).Fill(pair_kt, delta_phistar)
+						# getattr(self, hname.format(pair_kind, "eta",         "")).Fill(pair_kt, delta_eta)
+						# getattr(self, hname.format(pair_kind, "RL",          "")).Fill(pair_kt, RL)
 						getattr(self, hname.format(pair_kind, "phistar_eta", "")).Fill(pair_kt, delta_phistar, delta_eta)
 
 		obs_list = [obs for obs in self.observable_list if "pair_eff" in obs]
@@ -1538,7 +1538,7 @@ if __name__ == '__main__':
 	handler = logging.StreamHandler()
 
 	# Create a formatter and set it for the handler
-	formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(funcName)s - %(message)s')
+	formatter = logging.Formatter('%(asctime)s - %(filename)s:%(lineno)d - %(levelname)s - %(funcName)s - %(message)s')
 	handler.setFormatter(formatter)
 	handler.setLevel(logging.INFO)
 	logger.addHandler(handler)

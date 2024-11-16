@@ -30,7 +30,7 @@ import time
 import numpy as np
 import ROOT
 import yaml
-import pandas as pd
+# import pandas as pd
 import math
 
 # Fastjet via python (from external library heppy)
@@ -39,6 +39,18 @@ import fastjet as fj
 # Analysis utilities
 from pyjetty.alice_analysis.process.base import process_io
 from pyjetty.alice_analysis.process.base import process_base
+
+def linbins(xmin, xmax, nbins):
+    lspace = np.linspace(xmin, xmax, nbins+1)
+    return lspace
+    # arr = array.array('f', lspace)
+    # return arr
+
+def logbins(xmin, xmax, nbins):
+    lspace = np.logspace(np.log10(xmin), np.log10(xmax), nbins+1)
+    return lspace
+    # arr = array.array('f', lspace)
+    # return arr
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
@@ -68,6 +80,28 @@ class ProcessDataBase(process_base.ProcessBase):
     # Read config file
     with open(self.config_file, 'r') as stream:
       config = yaml.safe_load(stream)
+
+    self.weight_min, self.weight_max, self.weight_nbins = config["weight_binning"]
+    self.weight_bins = logbins(self.weight_min, self.weight_max, self.weight_nbins)
+
+    self.RL_min, self.RL_max, self.RL_nbins = config["RL_binning"]
+    self.RL_bins = logbins(self.RL_min, self.RL_max, self.RL_nbins)
+    
+    # print(self.RL_bins[8:])
+    # print(len(self.RL_bins[8:]))
+    # self.RL_min = self.RL_bins[0]
+    # self.RL_max = self.RL_bins[-1]
+    # self.RL_bins = self.RL_bins[8:]
+    # self.RL_nbins = len(self.RL_bins) - 1
+    print(self.RL_bins)
+    print(self.RL_nbins)
+    print(len(self.RL_bins))
+
+
+    # self.pT_truth_bins = np.array(config['pT_truth_bins'])
+    # self.pT_truth_nbins = len(self.pT_truth_bins) - 1
+    self.pT_det_bins = np.array(config['pT_det_bins'])
+    self.pT_det_nbins = len(self.pT_det_bins) - 1
 
     if 'use_ev_id' in config:
       self.use_ev_id = config['use_ev_id']
@@ -111,7 +145,7 @@ class ProcessDataBase(process_base.ProcessBase):
     for observable in self.observable_list:
     
       obs_config_dict = config[observable]
-      obs_config_list = [name for name in list(obs_config_dict.keys()) if 'config' in name ]
+      # obs_config_list = [name for name in list(obs_config_dict.keys()) if 'config' in name ]
       
       obs_subconfig_list = [name for name in list(obs_config_dict.keys()) if 'config' in name ]
       self.obs_settings[observable] = self.utils.obs_settings(observable, obs_config_dict, obs_subconfig_list)
@@ -133,7 +167,7 @@ class ProcessDataBase(process_base.ProcessBase):
     # Use IO helper class to convert ROOT TTree into a SeriesGroupBy object of fastjet particles per event
     print('--- {} seconds ---'.format(time.time() - self.start_time))
     io = process_io.ProcessIO(input_file=self.input_file, track_tree_name='tree_Particle',
-                              is_pp=self.is_pp, use_ev_id_ext=self.use_ev_id)
+                              is_pp=self.is_pp, use_ev_id_ext=self.use_ev_id, is_mc = False)
     self.df_fjparticles = io.load_data(m=self.m)
     self.nEvents = len(self.df_fjparticles.index)
     self.nTracks = len(io.track_df.index)
@@ -217,7 +251,7 @@ class ProcessDataBase(process_base.ProcessBase):
   # Fill track histograms.
   #---------------------------------------------------------------
   def fillTrackHistograms(self, track):
-    
+
     self.hTrackEtaPhi.Fill(track.eta(), track.phi())
     self.hTrackPt.Fill(track.pt())
   
@@ -234,7 +268,7 @@ class ProcessDataBase(process_base.ProcessBase):
       print('-------------------------------------------------')
       print('event {}'.format(self.event_number))
 
-    if self.event_number % 1000 == 0: print("analyzing event : " + str(self.event_number))
+    # if self.event_number % 1000 == 0: print("analyzing event : " + str(self.event_number))
 
     #handle case with no truth particles
     if type(fj_particles) is float:

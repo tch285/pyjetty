@@ -21,6 +21,14 @@ fast_simulation: False
 ENC_fastsim: False # only set to True when fast_simulation is set to True
 # deprecated dont use idk what it sfor
 
+weight_binning: [1.0e-5, 1, 20]
+# RL_binning: [0.005, 1, 22]
+RL_binning: [1.0e-3, 1, 30]
+# pT_nbins_truth: [5.0, 10.0, 20., 40., 60., 80., 100., 150.]
+pT_truth_bins: [5.0, 10.0, 20., 40., 60., 80., 100., 150.]
+# pT_nbins_det: [ 10.0, 20., 40., 60., 80., 100., 150.]
+pT_det_bins: [10.0, 20., 40., 60., 80., 100., 150.]
+
 jetpt_min_truth: 5.0
 jetpt_min_det: 5.0
 

@@ -33,7 +33,7 @@ handler = logging.StreamHandler()
 handler.setLevel(logging.INFO)
 
 # Create a formatter and set it for the handler
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(funcName)s - %(message)s')
+formatter = logging.Formatter('%(asctime)s - %(filename)s:%(lineno)d - %(levelname)s - %(funcName)s - %(message)s')
 handler.setFormatter(formatter)
 
 logger.addHandler(handler)
@@ -49,7 +49,7 @@ class ProcessIO(common_base.CommonBase):
                track_tree_name='tree_Particle', event_tree_name='tree_event_char',
                output_dir='', is_pp=True, min_cent=0., max_cent=10.,
                use_ev_id_ext=True, is_jetscape=False, holes=False,
-               event_plane_range=None, skip_event_tree=False, is_ENC=False, is_det_level=False, **kwargs):
+               event_plane_range=None, skip_event_tree=False, is_ENC=False, is_det_level=False, is_mc = True, **kwargs):
     super(ProcessIO, self).__init__(**kwargs)
     self.input_file = input_file
     self.output_dir = output_dir
@@ -69,6 +69,7 @@ class ProcessIO(common_base.CommonBase):
     if len(output_dir) and output_dir[-1] != '/':
       self.output_dir += '/'
     self.reset_dataframes()
+    self.is_mc = is_mc
     
     # Set the combination of fields that give a unique event id
     self.unique_identifier =  ['run_number', 'ev_id']
@@ -97,7 +98,10 @@ class ProcessIO(common_base.CommonBase):
       else:
         self.track_columns += ['ParticlePID']
     else:
-      self.track_columns += ['ParticleCharge', 'ParticleMCid']
+      self.track_columns += ['ParticleCharge']
+      if self.is_mc:
+        self.track_columns += ['ParticleMCid']
+
     
     #print(self)
     
@@ -122,8 +126,12 @@ class ProcessIO(common_base.CommonBase):
 
     logger.info('Converting ROOT trees to pandas dataframes...')
     logger.info(f'Track TTree name = {self.track_tree_name}')
-    self.charge_factor = 1 if self.is_det_level and not self.is_ENC else 3 # NOTE: should be careful with herwig
-    # self.charge_factor = 1
+    if self.is_mc and not self.is_det_level and not self.is_ENC:
+      # must be MC and generated level and not the fast sim
+      self.charge_factor = 3
+    else:
+      self.charge_factor = 1
+    # self.charge_factor = 1 if self.is_det_level and not self.is_ENC else 3 # NOTE: should be careful with herwig
     logger.info(f"Charge normalization factor set to {self.charge_factor}.")
 
     self.track_df = self.load_dataframe()
@@ -351,16 +359,12 @@ class ProcessIO(common_base.CommonBase):
         if self.is_det_level:
           df_fjparticles_aux = track_df_grouped.apply(
           self.get_particles_mc_index, m=m, offset_indices=offset_indices, random_mass=random_mass, min_pt=min_pt)
-          print('debug3')
-          print(df_fjparticles)
           print('debug3 aux: mcid')
           print(df_fjparticles_aux)
           df_fjparticles = pandas.DataFrame({"fj_particle": df_fjparticles_orig, "ParticleMCIndex": df_fjparticles_aux})
         else:
           df_fjparticles_aux = track_df_grouped.apply(
           self.get_particles_pid, m=m, offset_indices=offset_indices, random_mass=random_mass, min_pt=min_pt)
-          print('debug3')
-          print(df_fjparticles)
           print('debug3 aux: pid')
           print(df_fjparticles_aux)
           df_fjparticles = pandas.DataFrame({"fj_particle": df_fjparticles_orig, "ParticlePID": df_fjparticles_aux})
@@ -368,8 +372,7 @@ class ProcessIO(common_base.CommonBase):
         df_fjparticles = track_df_grouped.apply(
         self.get_fjparticles, m=m, offset_indices=offset_indices, random_mass=random_mass, min_pt=min_pt)
       
-      logger.debug(f'Combined:\n{df_fjparticles}')
-      logger.debug(df_fjparticles)
+      logger.info(f'Combined:\n{df_fjparticles}')
       
       # df_fjparticles = pandas.DataFrame({"fj_particle": track_df_grouped.apply(
       #   self.get_fjparticles, m=m, offset_indices=offset_indices, random_mass=random_mass, min_pt=min_pt), "ParticleMCIndex": track_df_grouped["ParticleMCIndex"]})
@@ -445,12 +448,17 @@ class ProcessIO(common_base.CommonBase):
       #     charge = PDGID(pid).charge
       #     fj_particles[i].set_python_info(int(charge))
     else:
-      
-      for i, (charge, mcid) in enumerate(zip(df_tracks_accepted['ParticleCharge'].values, df_tracks_accepted['ParticleMCid'].values)):
-        info = jet_info.JetInfo()
-        info.charge = charge / self.charge_factor
-        info.mcid = mcid
-        fj_particles[i].set_python_info(info)
+      if self.is_mc:
+        for i, (charge, mcid) in enumerate(zip(df_tracks_accepted['ParticleCharge'].values, df_tracks_accepted['ParticleMCid'].values)):
+          info = jet_info.JetInfo()
+          info.charge = charge / self.charge_factor
+          info.mcid = mcid
+          fj_particles[i].set_python_info(info)
+      else:
+        for i, charge in enumerate(df_tracks_accepted['ParticleCharge'].values):
+          info = jet_info.JetInfo()
+          info.charge = charge / self.charge_factor
+          fj_particles[i].set_python_info(info)
     return fj_particles
     # if self.is_ENC:
     #   if self.is_det_level:

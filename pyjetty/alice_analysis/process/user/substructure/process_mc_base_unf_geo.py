@@ -21,6 +21,8 @@ To use this class, the following should be done:
 Author: James Mulligan (james.mulligan@berkeley.edu)
 """
 
+from __future__ import print_function
+
 # General
 import time
 
@@ -67,7 +69,7 @@ handler.setLevel(logging.INFO)
 
 
 # Create a formatter and set it for the handler
-formatter = logging.Formatter('%(asctime)s - %(filename)s:%(lineno)d - %(levelname)s - %(funcName)s - %(message)s')
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(funcName)s - %(message)s')
 handler.setFormatter(formatter)
 # handler.setFormatter(ColoredFormatter('%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(funcName)s - %(message)s'))
 
@@ -79,15 +81,13 @@ ROOT.gROOT.SetBatch(True)
 
 def linbins(xmin, xmax, nbins):
     lspace = np.linspace(xmin, xmax, nbins+1)
-    return lspace
-    # arr = array.array('f', lspace)
-    # return arr
+    arr = array.array('f', lspace)
+    return arr
 
 def logbins(xmin, xmax, nbins):
     lspace = np.logspace(np.log10(xmin), np.log10(xmax), nbins+1)
-    return lspace
-    # arr = array.array('f', lspace)
-    # return arr
+    arr = array.array('f', lspace)
+    return arr
 
 ################################################################
 class ProcessMCBase(process_base.ProcessBase):
@@ -105,8 +105,8 @@ class ProcessMCBase(process_base.ProcessBase):
         with open("/global/cfs/projectdirs/alice/alicepro/hiccup/rstorage/alice/data/LHC18b8/scaleFactors.yaml", 'r') as stream:
                 pt_hat_yaml = yaml.safe_load(stream)
         self.pt_hat = pt_hat_yaml[self.pt_hat_bin]
-        logger.info("pt hat bin : " + str(self.pt_hat_bin))
-        logger.info("pt hat weight : " + str(self.pt_hat))
+        print("pt hat bin : " + str(self.pt_hat_bin))
+        print("pt hat weight : " + str(self.pt_hat))
         
         # Initialize configuration
         self.initialize_config()
@@ -122,29 +122,7 @@ class ProcessMCBase(process_base.ProcessBase):
         # Read config file
         with open(self.config_file, 'r') as stream:
             config = yaml.safe_load(stream)
-        
-        self.weight_min, self.weight_max, self.weight_nbins = config["weight_binning"]
-        self.weight_bins = logbins(self.weight_min, self.weight_max, self.weight_nbins)
-
-        self.RL_min, self.RL_max, self.RL_nbins = config["RL_binning"]
-        self.RL_bins = logbins(self.RL_min, self.RL_max, self.RL_nbins)
-        
-        # print(self.RL_bins[8:])
-        # print(len(self.RL_bins[8:]))
-        # self.RL_min = self.RL_bins[0]
-        # self.RL_max = self.RL_bins[-1]
-        # self.RL_bins = self.RL_bins[8:]
-        # self.RL_nbins = len(self.RL_bins) - 1
-        print(self.RL_bins)
-        print(self.RL_nbins)
-        print(len(self.RL_bins))
-
-
-        self.pT_truth_bins = np.array(config['pT_truth_bins'])
-        self.pT_truth_nbins = len(self.pT_truth_bins) - 1
-        self.pT_det_bins = np.array(config['pT_det_bins'])
-        self.pT_det_nbins = len(self.pT_det_bins) - 1
-
+            
         self.fast_simulation = config['fast_simulation']
         if self.fast_simulation:
             if 'ENC_fastsim' in config:
@@ -237,7 +215,7 @@ class ProcessMCBase(process_base.ProcessBase):
         
         # Use IO helper class to convert detector-level ROOT TTree into
         # a SeriesGroupBy object of fastjet particles per event
-        logger.info('--- {} seconds ---'.format(time.time() - self.start_time))
+        print('--- {} seconds ---'.format(time.time() - self.start_time))
         if self.fast_simulation:
             tree_dir = ''
         else:
@@ -248,7 +226,7 @@ class ProcessMCBase(process_base.ProcessBase):
         df_fjparticles_det = io_det.load_data(m=self.m, reject_tracks_fraction=self.reject_tracks_fraction)
         self.nEvents_det = len(df_fjparticles_det.index)
         self.nTracks_det = len(io_det.track_df.index)
-        logger.info('--- {} seconds ---'.format(time.time() - self.start_time))
+        print('--- {} seconds ---'.format(time.time() - self.start_time))
         
         # If jetscape, store also the negative status particles (holes)
         if self.jetscape:
@@ -259,7 +237,7 @@ class ProcessMCBase(process_base.ProcessBase):
             df_fjparticles_det_holes = io_det_holes.load_data(m=self.m, reject_tracks_fraction=self.reject_tracks_fraction)
             self.nEvents_det_holes = len(df_fjparticles_det_holes.index)
             self.nTracks_det_holes = len(io_det_holes.track_df.index)
-            logger.info('--- {} seconds ---'.format(time.time() - self.start_time))
+            print('--- {} seconds ---'.format(time.time() - self.start_time))
         
         # ------------------------------------------------------------------------
 
@@ -271,9 +249,9 @@ class ProcessMCBase(process_base.ProcessBase):
         df_fjparticles_truth = io_truth.load_data(m=self.m) # no dropping of tracks at truth level (important for the det-truth association because the index of the truth particle is used)
         self.nEvents_truth = len(df_fjparticles_truth.index)
         self.nTracks_truth = len(io_truth.track_df.index)
-        logger.info('--- {} seconds ---'.format(time.time() - self.start_time))
+        print('--- {} seconds ---'.format(time.time() - self.start_time))
 
-        logger.debug(f'Input truth DataFrame:\n{df_fjparticles_truth}')
+        print('Input truth Data Frame',df_fjparticles_truth)
         
         # If jetscape, store also the negative status particles (holes)
         if self.jetscape:
@@ -284,14 +262,14 @@ class ProcessMCBase(process_base.ProcessBase):
             df_fjparticles_truth_holes = io_truth_holes.load_data(m=self.m, reject_tracks_fraction=self.reject_tracks_fraction)
             self.nEvents_truth_holes = len(df_fjparticles_truth_holes.index)
             self.nTracks_truth_holes = len(io_truth_holes.track_df.index)
-            logger.info('--- {} seconds ---'.format(time.time() - self.start_time))
+            print('--- {} seconds ---'.format(time.time() - self.start_time))
         
         # ------------------------------------------------------------------------
 
         # Now merge the two SeriesGroupBy to create a groupby df with [ev_id, run_number, fj_1, fj_2]
         # (Need a structure such that we can iterate event-by-event through both fj_1, fj_2 simultaneously)
         # In the case of jetscape, we merge also the hole collections fj_3, fj_4
-        logger.info('Merge det-level and truth-level into a single dataframe grouped by event...')
+        print('Merge det-level and truth-level into a single dataframe grouped by event...')
         # print('debug df_fjparticles_det',df_fjparticles_det)
         # print('debug df_fjparticles_truth',df_fjparticles_truth)
         if self.jetscape:
@@ -300,11 +278,12 @@ class ProcessMCBase(process_base.ProcessBase):
         elif self.ENC_fastsim:
             self.df_fjparticles = pandas.concat([df_fjparticles_det, df_fjparticles_truth], axis=1)
             self.df_fjparticles.columns = ['fj_particles_det', 'ParticleMCIndex', 'fj_particles_truth', 'ParticlePID']
-            logger.info(self.df_fjparticles)
+            print('Merged output',self.df_fjparticles.columns)
+            print(self.df_fjparticles)
         else:
             self.df_fjparticles = pandas.concat([df_fjparticles_det, df_fjparticles_truth], axis=1)
             self.df_fjparticles.columns = ['fj_particles_det', 'fj_particles_truth']
-        logger.info('--- {} seconds ---'.format(time.time() - self.start_time))
+        print('--- {} seconds ---'.format(time.time() - self.start_time))
 
         # ------------------------------------------------------------------------
         
@@ -316,17 +295,17 @@ class ProcessMCBase(process_base.ProcessBase):
 
         self.initialize_output_objects()
         
-        # print(self)
+        print(self)
         
         # Find jets and fill histograms
-        logger.info('Find jets...')
+        print('Find jets...')
         self.analyze_events()
         
         # Plot histograms
-        logger.info('Save histograms...')
+        print('Save histograms...')
         process_base.ProcessBase.save_output_objects(self)
         
-        logger.info('--- {} seconds ---'.format(time.time() - self.start_time))
+        print('--- {} seconds ---'.format(time.time() - self.start_time))
 
     #---------------------------------------------------------------
     # Initialize histograms
@@ -416,7 +395,7 @@ class ProcessMCBase(process_base.ProcessBase):
     #---------------------------------------------------------------
     def analyze_events(self):
         
-        # fj.ClusterSequence.print_banner()
+        fj.ClusterSequence.print_banner()
         print()
         
         self.event_number = 0
@@ -433,9 +412,9 @@ class ProcessMCBase(process_base.ProcessBase):
         if self.debug_level > 0:
             for attr in dir(self):
                 obj = getattr(self, attr)
-                logger.debug('size of {}: {}'.format(attr, sys.getsizeof(obj)))
+                print('size of {}: {}'.format(attr, sys.getsizeof(obj)))
         
-        logger.info('Save thn...')
+        print('Save thn...')
         process_base.ProcessBase.save_thn_th3_objects(self)
         
     #---------------------------------------------------------------
@@ -444,15 +423,14 @@ class ProcessMCBase(process_base.ProcessBase):
     def fill_track_histograms(self, fj_particles_det):
 
         # Check that the entries exist appropriately
-        if not isinstance(fj_particles_det, fj.vectorPJ):
+        # (need to check how this can happen -- but it is only a tiny fraction of events)
+        if type(fj_particles_det) != fj.vectorPJ:
             return
         
         for track in fj_particles_det:
             self.hTrackEtaPhi.Fill(track.eta(), track.phi())
             self.hTrackPt.Fill(track.pt())
-    
-    def deltaR(self, p1, p2):
-        return np.sqrt(p1.delta_phi_to(p2) ** 2 + (p1.eta() - p2.eta()) ** 2)
+            
     #---------------------------------------------------------------
     # Analyze jets of a given event.
     # fj_particles is the list of fastjet pseudojets for a single fixed event.
@@ -463,32 +441,32 @@ class ProcessMCBase(process_base.ProcessBase):
         if self.event_number > self.event_number_max:
             return
         if self.debug_level > 1:
-            logger.debug('-------------------------------------------------')
-            logger.debug('event {}'.format(self.event_number))
+            print('-------------------------------------------------')
+            print('event {}'.format(self.event_number))
                 
         # if self.event_number % 1000 == 0: print("analyzing event : " + str(self.event_number))
 
         # various checks
         if self.jetscape:
             if not isinstance(fj_particles_det_holes, fj.vectorPJ) or not isinstance(fj_particles_truth_holes, fj.vectorPJ):
-                logger.warning('fj_particles_holes type mismatch -- skipping event')
+                print('fj_particles_holes type mismatch -- skipping event')
                 return
 
         #handle case with no truth particles
         if type(fj_particles_truth) is float:
-            logger.warning("Found event with no truth particles, skipping.")
+            print("EVENT WITH NO TRUTH PARTICLES!!!")
             return
         
         #handle case with no det particles
         if type(fj_particles_det) is float:
-            logger.warning("Found event with no det particles.")
+            print("EVENT WITH NO DET PARTICLES!!!")
             fj_particles_det = []
 
         if len(fj_particles_truth) > 1:
             if np.abs(fj_particles_truth[0].pt() - fj_particles_truth[1].pt()) <  1e-10:
-                logger.warning('WARNING: Duplicate particles may be present')
-                logger.debug([p.user_index() for p in fj_particles_truth])
-                logger.debug([p.pt() for p in fj_particles_truth])
+                print('WARNING: Duplicate particles may be present')
+                print([p.user_index() for p in fj_particles_truth])
+                print([p.pt() for p in fj_particles_truth])
 
         ##### CHARGE PARTICLE AND PARTICLE PT > 0.15 CUT
                 # ALSO RESET ALL USER INDICIES to 0
@@ -499,7 +477,7 @@ class ProcessMCBase(process_base.ProcessBase):
                     part.set_user_index(0)
                     fj_particles_det_pass.push_back(part)
             else:
-                logger.warning('Found particle with pT less than 150 MeV in det sample.')
+                print('found particle outside 0.15 in det')
         fj_particles_det = fj_particles_det_pass
 
         fj_particles_truth_pass = fj.vectorPJ()
@@ -509,7 +487,7 @@ class ProcessMCBase(process_base.ProcessBase):
                     part.set_user_index(0)
                     fj_particles_truth_pass.push_back(part)
             else:
-                logger.warning('Found particle with pT less than 150 MeV in truth sample.')
+                print('found particle outside 0.15 in det')
         fj_particles_truth = fj_particles_truth_pass
 
 
@@ -520,93 +498,74 @@ class ProcessMCBase(process_base.ProcessBase):
 
         ############################# TRACK MATCHING ################################
         # set all indicies to dummy index
-        # dummy_index = -1
-        # for i in range(len(fj_particles_truth)):
-        #     fj_particles_truth[i].set_user_index(dummy_index)
-        # for i in range(len(fj_particles_det)):
-        #     fj_particles_det[i].set_user_index(dummy_index)
+        dummy_index = -1
+        for i in range(len(fj_particles_truth)):
+            fj_particles_truth[i].set_user_index(dummy_index)
+        for i in range(len(fj_particles_det)):
+            fj_particles_det[i].set_user_index(dummy_index)
         
         # perform matching, give matches the same user_index
-        # index = 1
-        # det_used = []
-
-        for i_truth in range( len(fj_particles_truth) ):
-            particle_truth = fj_particles_truth[i_truth]
-            info_truth = particle_truth.python_info()
-            mcid_truth = info_truth.mcid
-            candidates = []
-            candidates_mcid = []
-            candidates_idx = []
-            for i_det in range( len(fj_particles_det) ):
-                particle_det = fj_particles_det[i_det]
-                info_det = particle_det.python_info()
-                if np.abs(info_det.mcid) == mcid_truth:
-                    candidates.append(particle_det)
-                    candidates_mcid.append(info_det.mcid)
-                    candidates_idx.append(i_det)
-
-            hname = 'h1d_truth_part_pt'
-            getattr(self, hname).Fill(particle_truth.perp())
-            if candidates:
-                if len(candidates) == 1:
-                    matched_det_idx = candidates_idx[0]
-                else:
-                    logger.warning(f"Found 2+ det particles with matching abs mcid: {candidates_mcid}")
-                    if all(id > 0 for id in candidates_mcid) or all(id < 0 for id in candidates_mcid):
-                        # mcids are all positive or all negative
-                        deltaR = [self.deltaR(particle_truth, part_det) for part_det in candidates]
-                        matched_det_idx = candidates_idx[np.argmin(deltaR)]
-                    else:
-                        # mcids are mixed +ve and -ve
-                        candidates_abs = [(part_det, idx) for part_det, mcid, idx in zip(candidates, candidates_mcid, candidates_idx) if mcid > 0]
-                        deltaR = [self.deltaR(particle_truth, part_det) for part_det, idx in candidates_abs]
-                        _, matched_det_idx = candidates_abs[np.argmin(deltaR)]
-
-                matched_det = fj_particles_det[matched_det_idx]
-                matched_det_info = matched_det.python_info()
-
-                info_truth.particle_det = matched_det
-                matched_det_info.particle_truth = particle_truth
+        index = 1
+        det_used = []
+        # note: CANNOT loop like this: <for truth_part in fj_particles_truth:>
+        for itruth in range(len(fj_particles_truth)):
+            truth_part = fj_particles_truth[itruth]
+        
+            truth_part.set_user_index(index)
                 
-                fj_particles_truth[i_truth].set_python_info(info_truth)
-                fj_particles_det[matched_det_idx].set_python_info(matched_det_info)
+            candidates = []
+            candidates_R = []
+                
+            for idet in range(len(fj_particles_det)):
+                det_part = fj_particles_det[idet]
+                
+                delta_R = self.calculate_distance(truth_part, det_part)
+                if delta_R < 0.05 and abs((det_part.perp() - truth_part.perp()) / truth_part.perp()) < 0.1 \
+                                and det_part not in det_used:
+                    candidates.append(det_part)
+                    candidates_R.append(delta_R)
 
-                deta = matched_det.eta() - particle_truth.eta()
-                dphi = matched_det.delta_phi_to(particle_truth)
+            # if match found
+            if len(candidates) > 0:
+                det_match = candidates[np.argmin(candidates_R)]
+                det_match.set_user_index(index)
+                det_used.append(det_match)
+
+                deta = det_match.eta() - truth_part.eta()
+                dphi = det_match.phi() - truth_part.phi()
 
                 hname = 'h2d_matched_part_deta_pt'
-                getattr(self, hname).Fill(deta, particle_truth.perp())
+                getattr(self, hname).Fill(deta, truth_part.perp())
 
                 hname = 'h2d_matched_part_dphi_pt'
-                getattr(self, hname).Fill(dphi, particle_truth.perp())
+                getattr(self, hname).Fill(dphi, truth_part.perp())
 
                 hname = 'h1d_truth_matched_part_pt'
-                getattr(self, hname).Fill(particle_truth.perp())
+                getattr(self, hname).Fill(truth_part.perp())
                 
                 hname = 'h1d_det_matched_part_pt'
-                getattr(self, hname).Fill(matched_det.perp())
+                getattr(self, hname).Fill(det_match.perp())
 
 
-            
-        logger.debug("MC ID matching completed.")
+            hname = 'h1d_truth_part_pt'
+            getattr(self, hname).Fill(truth_part.perp())
 
-        # can identify unmatched truth particles with particles with None as particle_det
+            index += 1
+
         # handle unmatched particles, give them all different user_index s
+        for i in range(len(fj_particles_truth)):
+            part = fj_particles_truth[i]
+            if part.user_index() == dummy_index:
+                part.set_user_index(index)
+                index += 1
 
-        # for i in range(len(fj_particles_truth)):
-        #     part = fj_particles_truth[i]
-        #     if part.user_index() == dummy_index:
-        #         part.set_user_index(index)
-        #         index += 1
-
-        # can identify unmatched det particles with particles with None as particle_truth
-        # unmatched_det = 0
-        # for i in range(len(fj_particles_det)):
-        #     part = fj_particles_det[i]
-        #     if part.user_index() == dummy_index:
-        #         part.set_user_index(index)
-        #         index += 1
-        #         unmatched_det += 1
+        unmatched_det = 0
+        for i in range(len(fj_particles_det)):
+            part = fj_particles_det[i]
+            if part.user_index() == dummy_index:
+                part.set_user_index(index)
+                index += 1
+                unmatched_det += 1
         # print("det matches: {} / {} = {}".format(unmatched_det, len(fj_particles_det), unmatched_det / len(fj_particles_det)))
 
         ######################### CONSTRUCT ENBEDDED EVENT ##########################
@@ -656,9 +615,10 @@ class ProcessMCBase(process_base.ProcessBase):
         jet_selector_truth = fj.SelectorPtMin(self.jetpt_min_truth) & fj.SelectorAbsRapMax(0.9)
 
         if self.debug_level > 2:
-            logger.debug('jet definition is:', jet_def)
-            logger.debug('jet selector for det-level is:', jet_selector_det)
-            logger.debug('jet selector for truth-level matches is:', jet_selector_truth)
+            print('')
+            print('jet definition is:', jet_def)
+            print('jet selector for det-level is:', jet_selector_det)
+            print('jet selector for truth-level matches is:', jet_selector_truth)
 
         # cluster truth jets
         cs_truth = fj.ClusterSequence(fj_particles_truth, jet_def)

@@ -62,18 +62,25 @@ class ProcessData_ENC(process_data_base_unf.ProcessDataBase):
   #---------------------------------------------------------------
   def initialize_user_output_objects(self):
         
-    n_bins_reco = [20, 22, 6]
-    binnings_reco = [np.logspace(-5,0,n_bins_reco[0]+1), \
-                np.logspace(-2.299,0,n_bins_reco[1]+1), \
-                np.array([10, 20, 40, 60, 80, 100, 150]).astype(float) ]
+    # n_bins_reco = [20, 22, 6]
+    # binnings_reco = [np.logspace(-5,0,n_bins_reco[0]+1), \
+    #             np.logspace(-2.299,0,n_bins_reco[1]+1), \
+    #             np.array([10, 20, 40, 60, 80, 100, 150]).astype(float) ]
 
-    h3_raw = ROOT.TH3D("raw", "raw", n_bins_reco[0], binnings_reco[0], n_bins_reco[1], binnings_reco[1], n_bins_reco[2], binnings_reco[2])
-    setattr(self, "raw", h3_raw)
-    h1_raw =  ROOT.TH1D("raw1D", "raw1D", n_bins_reco[2], binnings_reco[2])
+    # self.RL_nbins = 22
+    # self.RL_bins = np.logspace(-2.299,0,self.RL_nbins+1)
+
+    # h1_raw =  ROOT.TH1D("raw1D", "raw1D", n_bins_reco[2], binnings_reco[2])
+    h1_raw =  ROOT.TH1D("raw1D", "raw1D", self.pT_det_nbins, self.pT_det_bins)
     setattr(self, "raw1D", h1_raw)
+    for ptype in ['_PP', '_MM', '_PM', '']:
+      # h3_raw = ROOT.TH3D(f"raw{ptype}", f"raw{ptype}", n_bins_reco[0], binnings_reco[0], n_bins_reco[1], binnings_reco[1], n_bins_reco[2], binnings_reco[2])
+      h3_raw = ROOT.TH3D(f"raw{ptype}", f"raw{ptype}", self.weight_nbins, self.weight_bins, self.RL_nbins, self.RL_bins, self.pT_det_nbins, self.pT_det_bins)
+      setattr(self, f"raw{ptype}", h3_raw)
 
-    h2_raw_eec = ROOT.TH2D("raw_eec", "raw_eec", n_bins_reco[1], binnings_reco[1], n_bins_reco[2], binnings_reco[2])
-    setattr(self, "raw_eec", h2_raw_eec)
+      # h2_raw_eec = ROOT.TH2D(f"raw_eec{ptype}", f"raw_eec{ptype}", n_bins_reco[1], binnings_reco[1], n_bins_reco[2], binnings_reco[2])
+      h2_raw_eec = ROOT.TH2D(f"raw_eec{ptype}", f"raw_eec{ptype}", self.RL_nbins, self.RL_bins, self.pT_det_nbins, self.pT_det_bins)
+      setattr(self, f"raw_eec{ptype}", h2_raw_eec)
     
 
   #---------------------------------------------------------------
@@ -129,14 +136,22 @@ class ProcessData_ENC(process_data_base_unf.ProcessDataBase):
 
     EEC_cb = cb.correlator(ipoint)
 
-    EEC_weights = EEC_cb.weights() # cb.correlator(npoint).weights() constains list of weights
-    EEC_rs = EEC_cb.rs() # cb.correlator(npoint).rs() contains list of RL
-    
-    for i in range(len(EEC_rs)):
-        getattr(self, "raw").Fill(EEC_weights[i], EEC_rs[i], jet_pt)
-        getattr(self, "raw_eec").Fill(EEC_rs[i], jet_pt, EEC_weights[i])
-        
-          
+    for indices, RL, weight in zip(EEC_cb.indices(), EEC_cb.rs(), EEC_cb.weights()):
+      getattr(self, "raw").Fill(weight, RL, jet_pt)
+      getattr(self, "raw_eec").Fill(RL, jet_pt, weight)
+
+      charges = np.array([_v[index].python_info().charge for index in indices])
+
+      if np.all(charges > 0):
+        ptype = "PP"
+      elif np.all(charges < 0):
+        ptype = "MM"
+      else:
+        ptype = "PM"
+      getattr(self, f"raw_{ptype}").Fill(weight, RL, jet_pt)
+      getattr(self, f"raw_eec_{ptype}").Fill(RL, jet_pt, weight)
+
+      
 
 ##################################################################
 if __name__ == '__main__':

@@ -78,7 +78,7 @@ class ColoredFormatter(logging.Formatter):
 # Create a formatter and set it for the handler
 # formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(funcName)s - %(message)s')
 # handler.setFormatter(formatter)
-handler.setFormatter(ColoredFormatter('%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(funcName)s - %(message)s'))
+handler.setFormatter(ColoredFormatter('%(asctime)s - %(filename)s:%(lineno)d - %(levelname)s - %(funcName)s - %(message)s'))
 
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
@@ -385,18 +385,18 @@ class ProcessMCBase(process_base.ProcessBase):
             if "track_pairdist" in observable:
                 xaxis = "PairKt"
                 for data_class in ['', "_Truth"]:
-                    for yaxis in ['phi', 'phistar', 'eta']:
-                        name = f'h_{observable}_{yaxis}_{xaxis}{data_class}'
-                        h = ROOT.TH2D(name, name, self.kT_nbins, self.kT_bins, self.pairdist_nbins, self.pairdist_bins)
-                        h.GetXaxis().SetTitle('pair k_{T}')
-                        h.GetYaxis().SetTitle(f'{yaxis}')
-                        setattr(self, name, h)
+                    # for yaxis in ['phi', 'phistar', 'eta']:
+                    #     name = f'h_{observable}_{yaxis}_{xaxis}{data_class}'
+                    #     h = ROOT.TH2D(name, name, self.kT_nbins, self.kT_bins, self.pairdist_nbins, self.pairdist_bins)
+                    #     h.GetXaxis().SetTitle('pair k_{T}')
+                    #     h.GetYaxis().SetTitle(f'{yaxis}')
+                    #     setattr(self, name, h)
                     
-                    name = f'h_{observable}_RL_{xaxis}{data_class}'
-                    h = ROOT.TH2D(name, name, self.kT_nbins, self.kT_bins, self.RL_nbins, self.RL_bins)
-                    h.GetXaxis().SetTitle('pair k_{T}')
-                    h.GetYaxis().SetTitle('RL')
-                    setattr(self, name, h)
+                    # name = f'h_{observable}_RL_{xaxis}{data_class}'
+                    # h = ROOT.TH2D(name, name, self.kT_nbins, self.kT_bins, self.RL_nbins, self.RL_bins)
+                    # h.GetXaxis().SetTitle('pair k_{T}')
+                    # h.GetYaxis().SetTitle('RL')
+                    # setattr(self, name, h)
 
                     name = f'h_{observable}_phistar_eta_{xaxis}{data_class}'
                     h = ROOT.TH3F(name, name, self.kT_nbins, self.kT_bins, self.pairdist_nbins, self.pairdist_bins, self.pairdist_nbins, self.pairdist_bins)
@@ -463,8 +463,8 @@ class ProcessMCBase(process_base.ProcessBase):
     #---------------------------------------------------------------
     def analyze_events(self):
         # Fill track histograms
-        if not self.dry_run:
-            [self.fill_track_histograms(fj_particles_det) for fj_particles_det in self.df_fjparticles['fj_particles_det']]
+        # if not self.dry_run:
+        #     [self.fill_track_histograms(fj_particles_det) for fj_particles_det in self.df_fjparticles['fj_particles_det']]
         
         fj.ClusterSequence.print_banner()
         print()
@@ -574,28 +574,47 @@ class ProcessMCBase(process_base.ProcessBase):
                     print("MISMATCHED CHARGE----------------------------------------------------------------------------------------")
         else: # is pythia, so we match MC truth to det here:
             logger.debug("Starting MC ID matching.")
+            # st = time.perf_counter()
             for i_truth in range( len(fj_particles_truth) ):
                 particle_truth = fj_particles_truth[i_truth]
                 info_truth = particle_truth.python_info()
                 mcid_truth = info_truth.mcid
-                nmatches = 0
+                candidates = []
+                candidates_mcid = []
+                candidates_idx = []
                 for i_det in range( len(fj_particles_det) ):
                     particle_det = fj_particles_det[i_det]
                     info_det = particle_det.python_info()
-                    if self.is_mc_match(info_det.mcid, mcid_truth):
-                        nmatches += 1
-                        if nmatches >= 2:
-                            logger.warning(
-                                f"Event {self.event_number}: found more than one det-level match for this truth particle with MCID {mcid_truth}. "
-                                f"Previous track had MCID {info_truth.particle_det.python_info().mcid}, new particle has MCID {info_det.mcid}.\n"
-                                f"Truth: {particle_truth}\n"
-                                f"Old: {info_truth.particle_det}\n"
-                                f"New: {particle_det}")
-                        info_truth.particle_det = particle_det
-                        info_det.particle_truth = particle_truth
-                        fj_particles_truth[i_truth].set_python_info(info_truth)
-                        fj_particles_det[i_det].set_python_info(info_det)
+                    if np.abs(info_det.mcid) == mcid_truth:
+                        candidates.append(particle_det)
+                        candidates_mcid.append(info_det.mcid)
+                        candidates_idx.append(i_det)
+
+                if candidates:
+                    if len(candidates) == 1:
+                        matched_det_idx = candidates_idx[0]
+                    else:
+                        logger.warning(f"Found 2+ det particles with matching abs mcid: {candidates_mcid}")
+                        if all(id > 0 for id in candidates_mcid) or all(id < 0 for id in candidates_mcid):
+                            # mcids are all positive or all negative
+                            deltaR = [self.deltaR(particle_truth, part_det) for part_det in candidates]
+                            matched_det_idx = candidates_idx[np.argmin(deltaR)]
+                        else:
+                            # mcids are mixed +ve and -ve
+                            candidates_abs = [(part_det, idx) for part_det, mcid, idx in zip(candidates, candidates_mcid, candidates_idx) if mcid > 0]
+                            deltaR = [self.deltaR(particle_truth, part_det) for part_det, idx in candidates_abs]
+                            _, matched_det_idx = candidates_abs[np.argmin(deltaR)]
+
+                    matched_det = fj_particles_det[matched_det_idx]
+                    matched_det_info = matched_det.python_info()
+
+                    info_truth.particle_det = matched_det
+                    matched_det_info.particle_truth = particle_truth
+                    
+                    fj_particles_truth[i_truth].set_python_info(info_truth)
+                    fj_particles_det[matched_det_idx].set_python_info(matched_det_info)
             logger.debug("MC ID matching completed.")
+            # logger.info(f"matching took {time.perf_counter() - st} sec.")
         
         # add associated truth info and charge info in fj_particles_det using the JetInfo object
         # HACK: don't need mcid here really, and charge is already being converted so no need for this
@@ -630,7 +649,9 @@ class ProcessMCBase(process_base.ProcessBase):
                 fj_particles_truth[index].set_python_info(ecorr_user_info)
                 # fj_particles_truth[index].set_user_index(int(index))
         else:
+            # st = time.perf_counter()
             self.fill_efficiency_histograms(fj_particles_det, fj_particles_truth)
+            # logger.info(f"efficiency took {time.perf_counter() - st} sec.")
 
         if self.jetscape:
             if not isinstance(fj_particles_det_holes, fj.vectorPJ) or not isinstance(fj_particles_truth_holes, fj.vectorPJ):
@@ -710,122 +731,123 @@ class ProcessMCBase(process_base.ProcessBase):
             return
 
         # Loop through jetR, and process event for each R
-        for jetR in self.jetR_list:
+        # st = time.perf_counter()
+        # for jetR in self.jetR_list:
         
-            # Keep track of whether to fill R-independent histograms
-            self.fill_R_indep_hists = (jetR == self.jetR_list[0])
+        #     # Keep track of whether to fill R-independent histograms
+        #     self.fill_R_indep_hists = (jetR == self.jetR_list[0])
 
-            # Set jet definition and a jet selector
-            jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
-            jet_selector_det = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9 - jetR)
-            jet_selector_truth_matched = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9)
-            if self.debug_level > 2:
-                print('')
-                print('jet definition is:', jet_def)
-                print('jet selector for det-level is:', jet_selector_det)
-                print('jet selector for truth-level matches is:', jet_selector_truth_matched)
+        #     # Set jet definition and a jet selector
+        #     jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
+        #     jet_selector_det = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9 - jetR)
+        #     jet_selector_truth_matched = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9)
+        #     if self.debug_level > 2:
+        #         print('')
+        #         print('jet definition is:', jet_def)
+        #         print('jet selector for det-level is:', jet_selector_det)
+        #         print('jet selector for truth-level matches is:', jet_selector_truth_matched)
             
-            # Analyze
-            if self.is_pp:
-                # Find pp det and truth jets
-                if self.ENC_fastsim:
-                    # FIX ME: should treat long lived charged particle differently (check how the existing fast herwig and pythia handles it)
-                    fj_particles_det_ch = fj.vectorPJ()
-                    for part in fj_particles_det:
-                        if part.python_info().charge!=0: # only use charged particles HACK: commented out line, using the one after it
-                        # print(part.python_info())
-                        # if part.python_info()!=0:
-                            fj_particles_det_ch.append(part)
-                    cs_det = fj.ClusterSequence(fj_particles_det_ch, jet_def)
-                else:
-                    cs_det = fj.ClusterSequence(fj_particles_det, jet_def)
+        #     # Analyze
+        #     if self.is_pp:
+        #         # Find pp det and truth jets
+        #         if self.ENC_fastsim:
+        #             # FIX ME: should treat long lived charged particle differently (check how the existing fast herwig and pythia handles it)
+        #             fj_particles_det_ch = fj.vectorPJ()
+        #             for part in fj_particles_det:
+        #                 if part.python_info().charge!=0: # only use charged particles HACK: commented out line, using the one after it
+        #                 # print(part.python_info())
+        #                 # if part.python_info()!=0:
+        #                     fj_particles_det_ch.append(part)
+        #             cs_det = fj.ClusterSequence(fj_particles_det_ch, jet_def)
+        #         else:
+        #             cs_det = fj.ClusterSequence(fj_particles_det, jet_def)
                 
-                jets_det_pp = fj.sorted_by_pt(cs_det.inclusive_jets())
-                # make sure the user info (on the jet side) for jets are all empty right after the jet-clustering 
-                for jet in jets_det_pp: #HACK: not sure if this is unnecessary, but removing it...
-                    if jet.has_user_info():
-                        jet.python_info().clear_jet_info()
-                jets_det_pp_selected = jet_selector_det(jets_det_pp)
+        #         jets_det_pp = fj.sorted_by_pt(cs_det.inclusive_jets())
+        #         # make sure the user info (on the jet side) for jets are all empty right after the jet-clustering 
+        #         for jet in jets_det_pp: #HACK: not sure if this is unnecessary, but removing it...
+        #             if jet.has_user_info():
+        #                 jet.python_info().clear_jet_info()
+        #         jets_det_pp_selected = jet_selector_det(jets_det_pp)
                 
-                if self.ENC_fastsim:
-                    # FIXME: should treat long lived charged particle differently (check how the existing fast herwig and pythia handles it)
-                    fj_particles_truth_ch = fj.vectorPJ()
-                    for part in fj_particles_truth:
-                        if part.python_info().charge!=0: # only use charged particles #HACK: using the next line instead
-                        # if part.python_info()!=0:
-                            fj_particles_truth_ch.append(part)
-                    cs_truth = fj.ClusterSequence(fj_particles_truth_ch, jet_def)
-                else:
-                    cs_truth = fj.ClusterSequence(fj_particles_truth, jet_def)
+        #         if self.ENC_fastsim:
+        #             # FIXME: should treat long lived charged particle differently (check how the existing fast herwig and pythia handles it)
+        #             fj_particles_truth_ch = fj.vectorPJ()
+        #             for part in fj_particles_truth:
+        #                 if part.python_info().charge!=0: # only use charged particles #HACK: using the next line instead
+        #                 # if part.python_info()!=0:
+        #                     fj_particles_truth_ch.append(part)
+        #             cs_truth = fj.ClusterSequence(fj_particles_truth_ch, jet_def)
+        #         else:
+        #             cs_truth = fj.ClusterSequence(fj_particles_truth, jet_def)
 
-                jets_truth = fj.sorted_by_pt(cs_truth.inclusive_jets())
-                # make sure the user info (on the jet side) for jets are all empty right after the jet-clustering  
-                for jet in jets_truth: #HACK: not sure this is unnecessary, bt removing it...
-                  if jet.has_user_info():
-                    jet.python_info().clear_jet_info()
-                jets_truth_selected = jet_selector_det(jets_truth)
-                jets_truth_selected_matched = jet_selector_truth_matched(jets_truth)
+        #         jets_truth = fj.sorted_by_pt(cs_truth.inclusive_jets())
+        #         # make sure the user info (on the jet side) for jets are all empty right after the jet-clustering  
+        #         for jet in jets_truth: #HACK: not sure this is unnecessary, bt removing it...
+        #           if jet.has_user_info():
+        #             jet.python_info().clear_jet_info()
+        #         jets_truth_selected = jet_selector_det(jets_truth)
+        #         jets_truth_selected_matched = jet_selector_truth_matched(jets_truth)
             
-                self.analyze_jets(jets_det_pp_selected, jets_truth_selected, jets_truth_selected_matched, jetR)
+        #         self.analyze_jets(jets_det_pp_selected, jets_truth_selected, jets_truth_selected_matched, jetR)
                 
-            else:
-                for i, R_max in enumerate(self.max_distance):
-                    if self.debug_level > 1:
-                        print('')
-                        print('R_max: {}'.format(R_max))
-                        print('Total number of combined particles: {}'.format(len([p.pt() for p in fj_particles_combined_beforeCS])))
-                        print('After constituent subtraction {}: {}'.format(i, len([p.pt() for p in fj_particles_combined[i]])))
+        #     else:
+        #         for i, R_max in enumerate(self.max_distance):
+        #             if self.debug_level > 1:
+        #                 print('')
+        #                 print('R_max: {}'.format(R_max))
+        #                 print('Total number of combined particles: {}'.format(len([p.pt() for p in fj_particles_combined_beforeCS])))
+        #                 print('After constituent subtraction {}: {}'.format(i, len([p.pt() for p in fj_particles_combined[i]])))
                         
-                    # Keep track of whether to fill R_max-independent histograms
-                    self.fill_Rmax_indep_hists = (i == 0)
+        #             # Keep track of whether to fill R_max-independent histograms
+        #             self.fill_Rmax_indep_hists = (i == 0)
                     
-                    # Perform constituent subtraction on det-level, if applicable
-                    self.fill_background_histograms(fj_particles_combined_beforeCS, fj_particles_combined[i], jetR, i)
-                    rho = self.constituent_subtractor[i].bge_rho.rho() 
+        #             # Perform constituent subtraction on det-level, if applicable
+        #             self.fill_background_histograms(fj_particles_combined_beforeCS, fj_particles_combined[i], jetR, i)
+        #             rho = self.constituent_subtractor[i].bge_rho.rho() 
             
-                    # Do jet finding (re-do each time, to make sure matching info gets reset)
-                    cs_det = fj.ClusterSequence(fj_particles_det, jet_def)
-                    jets_det_pp = fj.sorted_by_pt(cs_det.inclusive_jets())
-                    jets_det_pp_selected = jet_selector_det(jets_det_pp)
+        #             # Do jet finding (re-do each time, to make sure matching info gets reset)
+        #             cs_det = fj.ClusterSequence(fj_particles_det, jet_def)
+        #             jets_det_pp = fj.sorted_by_pt(cs_det.inclusive_jets())
+        #             jets_det_pp_selected = jet_selector_det(jets_det_pp)
                     
-                    cs_truth = fj.ClusterSequence(fj_particles_truth, jet_def)
-                    jets_truth = fj.sorted_by_pt(cs_truth.inclusive_jets())
-                    jets_truth_selected = jet_selector_det(jets_truth)
-                    jets_truth_selected_matched = jet_selector_truth_matched(jets_truth)
+        #             cs_truth = fj.ClusterSequence(fj_particles_truth, jet_def)
+        #             jets_truth = fj.sorted_by_pt(cs_truth.inclusive_jets())
+        #             jets_truth_selected = jet_selector_det(jets_truth)
+        #             jets_truth_selected_matched = jet_selector_truth_matched(jets_truth)
                     
-                    cs_combined = fj.ClusterSequence(fj_particles_combined[i], jet_def)
-                    jets_combined = fj.sorted_by_pt(cs_combined.inclusive_jets())
-                    jets_combined_selected = jet_selector_det(jets_combined)
+        #             cs_combined = fj.ClusterSequence(fj_particles_combined[i], jet_def)
+        #             jets_combined = fj.sorted_by_pt(cs_combined.inclusive_jets())
+        #             jets_combined_selected = jet_selector_det(jets_combined)
 
-                    if self.do_rho_subtraction:
-                        cs_combined_beforeCS = fj.ClusterSequenceArea(fj_particles_combined_beforeCS, jet_def, fj.AreaDefinition(fj.active_area_explicit_ghosts))
-                        jets_combined_beforeCS = fj.sorted_by_pt(cs_combined_beforeCS.inclusive_jets())
-                        jets_combined_selected_beforeCS = jet_selector_det(jets_combined_beforeCS)
+        #             if self.do_rho_subtraction:
+        #                 cs_combined_beforeCS = fj.ClusterSequenceArea(fj_particles_combined_beforeCS, jet_def, fj.AreaDefinition(fj.active_area_explicit_ghosts))
+        #                 jets_combined_beforeCS = fj.sorted_by_pt(cs_combined_beforeCS.inclusive_jets())
+        #                 jets_combined_selected_beforeCS = jet_selector_det(jets_combined_beforeCS)
 
-                        jets_combined_reselected_beforeCS = self.reselect_jets(jets_combined_selected_beforeCS, jetR, rho_bge = rho)
+        #                 jets_combined_reselected_beforeCS = self.reselect_jets(jets_combined_selected_beforeCS, jetR, rho_bge = rho)
 
-                        if self.do_jetcone:
-                            self.analyze_jets(jets_combined_reselected_beforeCS, jets_truth_selected, jets_truth_selected_matched, jetR,
-                                                jets_det_pp_selected = jets_det_pp_selected, R_max = R_max,
-                                                fj_particles_det_holes = fj_particles_det_holes,
-                                                fj_particles_truth_holes = fj_particles_truth_holes, rho_bge = rho, fj_particles_det_cones = fj_particles_combined_beforeCS, fj_particles_truth_cones = fj_particles_truth)
-                        else:
-                            self.analyze_jets(jets_combined_reselected_beforeCS, jets_truth_selected, jets_truth_selected_matched, jetR,
-                                                jets_det_pp_selected = jets_det_pp_selected, R_max = R_max,
-                                                fj_particles_det_holes = fj_particles_det_holes,
-                                                fj_particles_truth_holes = fj_particles_truth_holes, rho_bge = rho)
-                    else:
-                        if self.do_jetcone:
-                            self.analyze_jets(jets_combined_selected, jets_truth_selected, jets_truth_selected_matched, jetR,
-                                                jets_det_pp_selected = jets_det_pp_selected, R_max = R_max,
-                                                fj_particles_det_holes = fj_particles_det_holes,
-                                                fj_particles_truth_holes = fj_particles_truth_holes, rho_bge = 0, fj_particles_det_cones = fj_particles_combined_beforeCS, fj_particles_truth_cones = fj_particles_truth) # NB: feed all particles for cone around the CS subtracted jet. An alternate way is to use CS subtracted particles
-                        else:
-                            self.analyze_jets(jets_combined_selected, jets_truth_selected, jets_truth_selected_matched, jetR,
-                                                jets_det_pp_selected = jets_det_pp_selected, R_max = R_max,
-                                                fj_particles_det_holes = fj_particles_det_holes,
-                                                fj_particles_truth_holes = fj_particles_truth_holes, rho_bge = 0)
-
+        #                 if self.do_jetcone:
+        #                     self.analyze_jets(jets_combined_reselected_beforeCS, jets_truth_selected, jets_truth_selected_matched, jetR,
+        #                                         jets_det_pp_selected = jets_det_pp_selected, R_max = R_max,
+        #                                         fj_particles_det_holes = fj_particles_det_holes,
+        #                                         fj_particles_truth_holes = fj_particles_truth_holes, rho_bge = rho, fj_particles_det_cones = fj_particles_combined_beforeCS, fj_particles_truth_cones = fj_particles_truth)
+        #                 else:
+        #                     self.analyze_jets(jets_combined_reselected_beforeCS, jets_truth_selected, jets_truth_selected_matched, jetR,
+        #                                         jets_det_pp_selected = jets_det_pp_selected, R_max = R_max,
+        #                                         fj_particles_det_holes = fj_particles_det_holes,
+        #                                         fj_particles_truth_holes = fj_particles_truth_holes, rho_bge = rho)
+        #             else:
+        #                 if self.do_jetcone:
+        #                     self.analyze_jets(jets_combined_selected, jets_truth_selected, jets_truth_selected_matched, jetR,
+        #                                         jets_det_pp_selected = jets_det_pp_selected, R_max = R_max,
+        #                                         fj_particles_det_holes = fj_particles_det_holes,
+        #                                         fj_particles_truth_holes = fj_particles_truth_holes, rho_bge = 0, fj_particles_det_cones = fj_particles_combined_beforeCS, fj_particles_truth_cones = fj_particles_truth) # NB: feed all particles for cone around the CS subtracted jet. An alternate way is to use CS subtracted particles
+        #                 else:
+        #                     self.analyze_jets(jets_combined_selected, jets_truth_selected, jets_truth_selected_matched, jetR,
+        #                                         jets_det_pp_selected = jets_det_pp_selected, R_max = R_max,
+        #                                         fj_particles_det_holes = fj_particles_det_holes,
+        #                                         fj_particles_truth_holes = fj_particles_truth_holes, rho_bge = 0)
+        # logger.info(f"jets took {time.perf_counter() - st} sec.")
     #---------------------------------------------------------------
     # Jet selection cuts.
     #---------------------------------------------------------------
