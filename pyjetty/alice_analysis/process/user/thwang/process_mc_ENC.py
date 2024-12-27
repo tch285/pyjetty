@@ -7,8 +7,6 @@
 	Author: James Mulligan (james.mulligan@berkeley.edu)
 """
 
-from __future__ import print_function
-
 # General
 import os
 import sys
@@ -28,6 +26,7 @@ import fastjet as fj
 # import fjcontrib
 # import fjtools
 import ecorrel
+import uproot as ur
 
 # Analysis utilities
 # from pyjetty.alice_analysis.process.base import process_io
@@ -93,81 +92,40 @@ class ProcessMC_ENC(process_mc_base.ProcessMCBase):
 		if "logRL_binning" in config.keys():
 			self.logRL_min, self.logRL_max, self.logRL_nbins = config['logRL_binning']
 			self.logRL_bins = linbins(self.logRL_min, self.logRL_max, self.logRL_nbins) # x edges
-		
-
-
-		if self.ENC_fastsim:
-			self.pair_eff_file = self.pair_eff_file
-			self.dp_edges = np.array(self.dp_bins) # yedges
-			self.pair_effs = {}
-			for ptype in ["P", "M", "PM"]:
-				self.pair_effs[ptype] = self.get_efficiency_array(self.pair_eff_file, f"h_pair_eff_{ptype}_0miss")
-			self.scale_effs()
-
-	def scale_effs(self):
-		for ptype in ["P", "M", "PM"]:
-			eff = self.pair_effs[ptype]
-			for ybin in range(self.dp_nbins):
-				eff_slice = eff[:, ybin]
-				slice_max = eff_slice.max()
-				eff[:, ybin] *= 1 / slice_max
-			logger.info(ptype)
-			for ybin in range(self.dp_nbins):
-				logger.info(ybin)
-				print(eff[:, ybin])
-
-	def get_efficiency_array(self, file_path, efficiency_name):
-		"""
-		Extract efficiency values into a 2D numpy array
-		
-		Parameters:
-		-----------
-		file_path : str
-			Path to ROOT file
-		efficiency_name : str
-			Name of TEfficiency object in file
-		
-		Returns:
-		--------
-		tuple : (eff_array, x_edges, y_edges)
-			2D numpy array of efficiency values and bin edges
-		"""
-		with ROOT.TFile.Open(file_path, 'read') as f:
-			eff = f.Get(efficiency_name)
-			total_hist = eff.GetTotalHistogram()
-			
-			nx = total_hist.GetNbinsX()
-			ny = total_hist.GetNbinsY()
-			
-			# Create 2D numpy array to store efficiencies
-			eff_array = np.zeros((nx, ny))
-			
-			# Fill the array with efficiency values
-			for ix in range(1, nx + 1):
-				for iy in range(1, ny + 1):
-					global_bin = eff.GetGlobalBin(ix, iy)
-					eff_array[ix-1, iy-1] = eff.GetEfficiency(global_bin)
-			
-			# Get bin edges
-			# x_edges = np.array([total_hist.GetXaxis().GetBinLowEdge(i) 
-			# 				for i in range(1, nx + 2)])
-			# y_edges = np.array([total_hist.GetYaxis().GetBinLowEdge(i) 
-			# 				for i in range(1, ny + 2)])
-			
-			# return eff_array, x_edges, y_edges
-			return eff_array
-	
-	def get_pair_eff(self, RL, dp, q1, q2):
-		if q1 * q2 < 0:
-			ptype = "PM"
-		elif q1 > 0 and q2 > 0:
-			ptype = "P"
+		if 'pair_eff_on' in config.keys() and self.ENC_fastsim:
+			self.pair_eff_on = config['pair_eff_on']
 		else:
-			ptype = "M"
-		eff = self.pair_effs[ptype]
+			self.pair_eff_on = False
 
-		x_bin = np.searchsorted(self.logRL_bins, np.log10(RL), side='left') - 1
-		y_bin = np.searchsorted(self.dp_bins, 	 dp, 		   side='left') - 1
+		if self.ENC_fastsim and self.pair_eff_on:
+			self.pair_effs_qpt, self.eff_qpt_edges, self.eff_logRL_edges = self.get_effs_qpt_from_file(config['pair_eff_file_qpt'])
+			self.pair_effs_phet, self.eff_kt_edges, self.eff_phist_edges, self.eff_deta_edges = self.get_effs_phet_from_file(config['pair_eff_file_phet'])
+			
+	def get_effs_phet_from_file(self, filename):
+		with ur.open(filename) as file:
+			h = file['pair_eff_T_kt_ph_et']
+			ktedges = h.axis(0).edges()
+			phedges = h.axis(1).edges()
+			etedges = h.axis(2).edges()
+			effs = {}
+			for ptype in ["P", "M", "PM"]:
+				effs[ptype] = file[f'pair_eff_{ptype}_kt_ph_et'].values()
+		return effs, ktedges, phedges, etedges
+	def get_effs_qpt_from_file(self, filename):
+		with ur.open(filename) as file:
+			h = file['pair_eff_T']
+			logRLedges = h.axis(0).edges()
+			qpTedges = h.axis(1).edges()
+			effs = {}
+			for ptype in ["P", "M", "PM"]:
+				effs[ptype] = file[f'pair_eff_{ptype}'].values()
+		return effs, qpTedges, logRLedges
+
+	def get_pair_eff_qpt(self, RL, dp, ptype):
+		eff = self.pair_effs_qpt[ptype]
+
+		x_bin = np.searchsorted(self.eff_logRL_edges, np.log10(RL), side='left') - 1
+		y_bin = np.searchsorted(self.eff_qpt_edges, dp, side='left') - 1
 		
 		# Check if point is within bounds
 		if (0 <= x_bin < eff.shape[0] and 
@@ -175,30 +133,20 @@ class ProcessMC_ENC(process_mc_base.ProcessMCBase):
 			return eff[x_bin, y_bin]
 		else:
 			return 1
+	def get_pair_eff_phet(self, kt, dphistar, deta, ptype):
+		eff = self.pair_effs_phet[ptype]
 
-	
-	# ---------------------------------------------
-	# Determine pair efficiency with the pair
-	# property and input histograms
-	#---------------------------------------------------------------
-	# def get_pair_eff(self, dist, dq_over_p):
-	# 	# return pair efficiency (from 0 to 1)
-	# 	idpbin = -9999
-	# 	for idp in range(self.dpbin):
-	# 		if math.fabs(dq_over_p)>=self.dp_lo[idp] and math.fabs(dq_over_p)<self.dp_hi[idp]:
-	# 			idpbin = idp
-
-	# 	pair_eff = 1 # set pair efficeincy to 1 if dq_over_p>=2
-	# 	if idpbin>=0:
-	# 		if math.log10(dist)<0 and math.log10(dist)>-3:
-	# 				ibin = self.h1d_eff_vs_dR_in_dq_over_p[idpbin].FindBin(math.log10(dist))
-	# 				pair_eff = self.h1d_eff_vs_dR_in_dq_over_p[idpbin].GetBinContent(ibin)
-	# 		elif math.log10(dist)>=0:
-	# 				pair_eff = 1 # overflow
-	# 		else:
-	# 				pair_eff = 0 # NB: underflow set to 0 efficiency. Maybe too aggressive but should be fine since we plan to measure down to dist ~1E-2
-
-	# 	return pair_eff
+		x_bin = np.searchsorted(self.eff_kt_edges, kt, side='left') - 1
+		y_bin = np.searchsorted(self.eff_phist_edges, dphistar, side='left') - 1
+		z_bin = np.searchsorted(self.eff_deta_edges, deta, side='left') - 1
+		
+		# Check if point is within bounds
+		if (0 <= x_bin < eff.shape[0] and 
+			0 <= y_bin < eff.shape[1] and
+			0 <= z_bin < eff.shape[2]):
+			return eff[x_bin, y_bin, z_bin]
+		else:
+			return 1
 
 	#---------------------------------------------------------------
 	# Calculate pair distance of two fastjet particles
@@ -251,6 +199,9 @@ class ProcessMC_ENC(process_mc_base.ProcessMCBase):
 		# return 0.5*np.sqrt( pow(p1.pt(),2)+pow(p1.pt(),2)+2*p1.pt()*p2.pt()*np.cos(p1.phi()-p2.phi()) )
 		# fixed formula below
 		return 0.5*np.sqrt( pow(p1.pt(),2)+pow(p2.pt(),2)+ 2*p1.pt()*p2.pt()*np.cos(p1.phi()-p2.phi()) )
+		# NOTE: to self: this is actually law of cosines but vector causes plus not minus on cos term
+		# e.g. consider case when phis are equal, then sum has double magnitude, which is only possible
+		# with + cos not - cos (proper angle is 180-theta not theta)
 	#---------------------------------------------------------------
 	# Initialize histograms
 	#---------------------------------------------------------------
@@ -260,7 +211,10 @@ class ProcessMC_ENC(process_mc_base.ProcessMCBase):
 			for trk_thrd in self.obs_settings[observable]:
 				obs_label = self.utils.obs_label(trk_thrd, None)
 
-				self.pair_type_labels = ['']
+				if self.ENC_fastsim and self.pair_eff_on:
+					self.pair_type_labels = ['_qpt', '_phet']
+				else:
+					self.pair_type_labels = ['']
 				if self.do_rho_subtraction or self.do_constituent_subtraction:
 					self.pair_type_labels = ['_bb','_sb','_ss']
 
@@ -398,7 +352,7 @@ class ProcessMC_ENC(process_mc_base.ProcessMCBase):
 						for dtype in ['_2miss', '_1miss', '_0miss', '_Truth']:
 							name = f'h_{observable}{dtype}'
 							h = ROOT.TH2D(name, name, self.logRL_nbins, self.logRL_bins, self.dp_nbins, self.dp_bins)
-							h.GetXaxis().SetTitle('log(R_{T})')
+							h.GetXaxis().SetTitle('log(R_{L})')
 							h.GetYaxis().SetTitle('#delta q/p_{T}')
 							setattr(self, name, h)
 
@@ -716,24 +670,32 @@ class ProcessMC_ENC(process_mc_base.ProcessMCBase):
 	# 			weights_pair.append( 1 )
 	# 	return weights_pair
 	def get_pair_eff_weights(self, corr_builder, ipoint, constituents):
-		weights_pair = []
+		weights_qpt = []
+		weights_phet = []
 		for indices, RL, weight in zip(corr_builder.correlator(ipoint).indices(), corr_builder.correlator(ipoint).rs(), corr_builder.correlator(ipoint).weights()):
-		# for index in range(corr_builder.correlator(ipoint).rs().size()):
-			# idx1 = indices[0]
-			# idx2 = indices[1]
-			if indices[0] != indices[1]: # FIX ME: not sure, but for now only apply pair efficiency for non auto-correlations
-				# Need to find the associated truth information for each pair (charge and momentum)
-				# part1_truth = constituents[idx1].python_info().particle_truth
-				# part2_truth = constituents[idx2].python_info().particle_truth
-				q1, q2 = [constituents[index].python_info().charge for index in indices]
-				pt1, pt2 = [constituents[index].python_info().particle_truth.pt() for index in indices]
-				# dist = RL # NB: use reconstructed distance since it's faster and should be equivalent to true distance because there is no angular smearing on the track momentum. To switch back to the true distance, use: self.calculate_distance(part1_truth, part2_truth)
-				dq_over_p = q1 / pt1 - q2 / pt2
-				# calculate pair efficeincy and apply it as an additional weight
-				weights_pair.append( self.get_pair_eff(RL, dq_over_p, q1, q2) )
+			idx1 = indices[0]
+			idx2 = indices[1]
+			if indices[0] != indices[1]:
+				p1 = constituents[idx1].python_info().particle_truth
+				p2 = constituents[idx2].python_info().particle_truth
+				q1, q2 = p1.python_info().charge, p2.python_info().charge
+				pt1, pt2 = p1.pt(), p2.pt()
+				dq_over_p = np.abs(q1 / pt1 - q2 / pt2)
+				kt = self.calc_kt(p1, p2)
+				dphistar = self.calc_phistar(p1, p2, q1, q2)
+				deta = p2.eta() - p1.eta()
+				if q1 * q2 < 0:
+					ptype = "PM"
+				elif q1 > 0 and q2 > 0:
+					ptype = "P"
+				else:
+					ptype = "M"
+				weights_qpt.append( self.get_pair_eff_qpt(RL, dq_over_p, ptype) )
+				weights_phet.append( self.get_pair_eff_phet(kt, dphistar, deta, ptype) )
 			else:
-				weights_pair.append( 1 )
-		return weights_pair
+				weights_qpt.append( 1 )
+				weights_phet.append( 1 )
+		return weights_qpt, weights_phet
 
 	def is_same_charge(self, corr_builder, ipoint, constituents, index):
 		part1 = int(corr_builder.correlator(ipoint).indices1()[index])
@@ -782,11 +744,15 @@ class ProcessMC_ENC(process_mc_base.ProcessMCBase):
 				else:
 					logger.warning("Mischarged particle found!")
 
-		if "track_eff_pt_Truth" in self.observable_list:
+		if "track_eff_pt" in self.observable_list:
 			for part in parts_truth:
 				getattr(self, "h_track_eff_pt_Truth").Fill(part.pt())
 				if part.python_info().particle_det is not None:
 					getattr(self, "h_track_eff_pt").Fill(part.pt())
+				# 	getattr(self, "h_track_eff_pt_teff").Fill(True, part.pt())
+				# else:
+				# 	getattr(self, "h_track_eff_pt_teff").Fill(False, part.pt())
+
 		if "track_pt_rsn" in self.observable_list:
 			for part in parts_truth:
 				if part.python_info().particle_det is not None:
@@ -835,10 +801,11 @@ class ProcessMC_ENC(process_mc_base.ProcessMCBase):
 		if len(obs_list) != 0:
 			hname = 'h_pair_eff_{}{}'
 
-			index_pairs = itertools.combinations(range(len(parts_truth)), 2)
-			for i1, i2 in index_pairs:
-				p1 = parts_truth[i1]
-				p2 = parts_truth[i2]
+			# index_pairs = itertools.combinations(range(len(parts_truth)), 2)
+			# for i1, i2 in index_pairs:
+			# 	p1 = parts_truth[i1]
+			# 	p2 = parts_truth[i2]
+			for p1, p2 in itertools.combinations(parts_truth, 2):
 				charges = np.array([p1.python_info().charge, p2.python_info().charge])
 				RL = self.calculate_distance(p1, p2)
 				# logRL = np.log10(np.sqrt((p2.eta() - p1.eta()) ** 2 + (p1.delta_phi_to(p2)) ** 2))
@@ -865,7 +832,6 @@ class ProcessMC_ENC(process_mc_base.ProcessMCBase):
 				else:
 					for pair_type in ["T", ptype]:
 						getattr(self, hname.format(pair_type, "_0miss")).Fill(logRL, dqpT)
-				
 
 	#---------------------------------------------------------------
 	# This function is called once for each jet subconfiguration
@@ -895,7 +861,7 @@ class ProcessMC_ENC(process_mc_base.ProcessMCBase):
 		else:
 			jet_pt = jet.perp()
 
-		maxpoint = 3
+		maxpoint = 2
 		# print(hname)
 		new_corr = ecorrel.CorrelatorBuilder(c_select, jet_pt, maxpoint, 1, dphi_cut, deta_cut)
 		for observable in self.observable_list:
@@ -1007,11 +973,11 @@ class ProcessMC_ENC(process_mc_base.ProcessMCBase):
 
 			# if 'E2C' in observable:
 		cE2C_observables = [obs for obs in self.observable_list if 'E2C' in obs]
-		if len(cE2C_observables) >= 1:
-			pair_type_label = ''
+  
+		if len(cE2C_observables) >= 1 and not self.pair_eff_on:
 			# hname = 'h_{{}}_JetPt_Truth_R{}_{{}}'.format(jetR)
+			pair_type_label = ''
 			observable_skel = "jet_E2C_{}_RL{}"
-			# getattr(self, hname.format(observable + str(ipoint) + pair_type_label,obs_label)).Fill(jet_pt, new_corr.correlator(ipoint).rs()[index], new_corr.correlator(ipoint).weights()[index])
 			ipoint = 2
 			if self.ENC_fastsim and ('Truth' not in hname): # NB: only apply pair efficiency effect for fast sim and det level distributions
 				weights_pair = self.get_pair_eff_weights(new_corr, ipoint, c_select)
@@ -1039,6 +1005,43 @@ class ProcessMC_ENC(process_mc_base.ProcessMCBase):
 				getattr(self, hname.format(observable_skel.format('Q', ''), obs_label)).Fill(jet_pt, RL, np.prod(charges) * weight)
 				# getattr(self, hname.format(observable_skel.format('Q', 'Pt'), obs_label)).Fill(jet_pt, jet_pt * RL, np.prod(charges) * weight)
 				getattr(self, hname.format(observable_skel.format('T', ''), obs_label)).Fill(jet_pt, RL, weight)
+
+		elif len(cE2C_observables) >= 1 and self.ENC_fastsim and self.pair_eff_on:
+		# name = 'h_{}{}_JetPt_Truth_R{}_{}'.format(observable, pair_type_label, jetR, obs_label)
+				# h_{jet_E2C_M_RL}{}_JetPt_R{0.4}_{1.0}
+			# getattr(self, hname.format(observable + str(ipoint) + pair_type_label,obs_label)).Fill(jet_pt, new_corr.correlator(ipoint).rs()[index], new_corr.correlator(ipoint).weights()[index])
+			pair_type_label = ['_qpt', '_phet']
+			# hname = 'h_{{}}_JetPt_Truth_R{}_{{}}'.format(jetR)
+			observable_skel = "jet_E2C_{}_RL{}"
+			# getattr(self, hname.format(observable + str(ipoint) + pair_type_label,obs_label)).Fill(jet_pt, new_corr.correlator(ipoint).rs()[index], new_corr.correlator(ipoint).weights()[index])
+			ipoint = 2
+			if 'Truth' not in hname: # NB: only apply pair efficiency effect for fast sim and det level distributions
+				weights_qpt, weights_phet = self.get_pair_eff_weights(new_corr, ipoint, c_select)
+			else:
+				ln = len(new_corr.correlator(ipoint).rs())
+				weights_qpt = weights_phet = [1] * ln
+			for indices, RL, weight, peff_qpt, peff_phet in zip(new_corr.correlator(ipoint).indices(), new_corr.correlator(ipoint).rs(), new_corr.correlator(ipoint).weights(), weights_qpt, weights_phet, strict = True):
+
+				# observable = jet_E2C_T_RL
+				charges = np.array([c_select[index].python_info().charge for index in indices])
+
+				if np.all(charges > 0):
+					getattr(self, hname.format(observable_skel.format('P', '_qpt'), obs_label)).Fill(jet_pt, RL, weight*peff_qpt)
+					getattr(self, hname.format(observable_skel.format('P', '_phet'), obs_label)).Fill(jet_pt, RL, weight*peff_phet)
+					# getattr(self, hname.format(observable_skel.format('P', 'Pt'), obs_label)).Fill(jet_pt, jet_pt * RL, weight)
+				elif np.all(charges < 0):
+					getattr(self, hname.format(observable_skel.format('M', '_qpt'), obs_label)).Fill(jet_pt, RL, weight*peff_qpt)
+					getattr(self, hname.format(observable_skel.format('M', '_phet'), obs_label)).Fill(jet_pt, RL, weight*peff_phet)
+					# getattr(self, hname.format(observable_skel.format('M', 'Pt'), obs_label)).Fill(jet_pt, jet_pt * RL, weight)
+				else:
+					getattr(self, hname.format(observable_skel.format('PM', '_qpt'), obs_label)).Fill(jet_pt, RL, weight*peff_qpt)
+					getattr(self, hname.format(observable_skel.format('PM', '_phet'), obs_label)).Fill(jet_pt, RL, weight*peff_phet)
+					# getattr(self, hname.format(observable_skel.format('PM', 'Pt'), obs_label)).Fill(jet_pt, jet_pt * RL, weight)
+				getattr(self, hname.format(observable_skel.format('Q', '_qpt'), obs_label)).Fill(jet_pt, RL, np.prod(charges) * weight*peff_qpt)
+				getattr(self, hname.format(observable_skel.format('Q', '_phet'), obs_label)).Fill(jet_pt, RL, np.prod(charges) * weight*peff_phet)
+				# getattr(self, hname.format(observable_skel.format('Q', 'Pt'), obs_label)).Fill(jet_pt, jet_pt * RL, np.prod(charges) * weight)
+				getattr(self, hname.format(observable_skel.format('T', '_qpt'), obs_label)).Fill(jet_pt, RL, weight*peff_qpt)
+				getattr(self, hname.format(observable_skel.format('T', '_phet'), obs_label)).Fill(jet_pt, RL, weight*peff_phet)
 
 
 		# NOTE: for now ignoring E3C to reduce processing time
@@ -1244,10 +1247,11 @@ class ProcessMC_ENC(process_mc_base.ProcessMCBase):
 			jet_truth_pt = jet.pt()
 			if len(reco_truth) < 2:
 				return
-			index_pairs = itertools.combinations(range(len(reco_truth)), 2)
-			for i1, i2 in index_pairs:
-				p1_truth = reco_truth[i1]
-				p2_truth = reco_truth[i2]
+			# index_pairs = itertools.combinations(range(len(reco_truth)), 2)
+			# for i1, i2 in index_pairs:
+			# 	p1_truth = reco_truth[i1]
+			# 	p2_truth = reco_truth[i2]
+			for p1_truth, p2_truth in itertools.combinations(reco_truth, 2):
 				charges_truth = np.array([p1_truth.python_info().charge, p2_truth.python_info().charge])
 				if np.all(charges_truth > 0):
 					pair_type_truth = "P"
@@ -1258,7 +1262,8 @@ class ProcessMC_ENC(process_mc_base.ProcessMCBase):
 				if pair_type_truth != histo_pair_type:
 					continue
 
-				pair_kt_truth = (p1_truth.pt() + p2_truth.pt()) / 2
+				# pair_kt_truth = (p1_truth.pt() + p2_truth.pt()) / 2
+				pair_kt_truth = self.calc_kt(p1_truth, p2_truth)
 				getattr(self, f"{hname}_Truth").Fill(pair_kt_truth, jet_truth_pt)
 
 				p1_det = p1_truth.python_info().particle_det
@@ -1519,7 +1524,7 @@ class ProcessMC_ENC(process_mc_base.ProcessMCBase):
 if __name__ == '__main__':
 	# Define arguments
 	parser = argparse.ArgumentParser(description='Process MC')
-	parser.add_argument('-f', '--input-file', action='store',
+	parser.add_argument('-i', '--input-file', action='store',
 											type=str, metavar='inputFile',
 											default='AnalysisResults.root',
 											help='Path of ROOT file containing TTrees')

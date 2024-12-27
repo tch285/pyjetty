@@ -27,7 +27,7 @@ import time
 # Data analysis and plotting
 import pandas
 import numpy as np
-import array
+# import array
 import ROOT
 import yaml
 import math
@@ -135,9 +135,9 @@ class ProcessMCBase(process_base.ProcessBase):
         # self.RL_max = self.RL_bins[-1]
         # self.RL_bins = self.RL_bins[8:]
         # self.RL_nbins = len(self.RL_bins) - 1
-        print(self.RL_bins)
-        print(self.RL_nbins)
-        print(len(self.RL_bins))
+        # print(self.RL_bins)
+        # print(self.RL_nbins)
+        # print(len(self.RL_bins))
 
 
         self.pT_truth_bins = np.array(config['pT_truth_bins'])

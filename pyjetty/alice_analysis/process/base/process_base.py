@@ -60,7 +60,10 @@ class ProcessBase(common_base.CommonBase):
       os.makedirs(self.output_dir)
       
     # Create output file
-    outputfilename = os.path.join(self.output_dir, 'AnalysisResults.root')
+    if hasattr(self, 'outputfilename'):
+      outputfilename = os.path.join(self.output_dir, self.outputfilename)
+    else:
+      outputfilename = os.path.join(self.output_dir, 'AnalysisResults.root')
     fout = ROOT.TFile(outputfilename, 'recreate')
     fout.Close()
 
@@ -169,7 +172,8 @@ class ProcessBase(common_base.CommonBase):
   def set_matching_candidates(self, jet1, jet2, jetR, hname, fill_jet1_matches_only=False):
   
     # Fill histogram of matching distance of all candidates
-    deltaR = jet1.delta_R(jet2)
+    # deltaR = jet1.delta_R(jet2) # NOTE: replaced with deltaR so we use eta not y
+    deltaR = self.deltaR(jet1, jet2)
     if hname:
       getattr(self, hname.format(jetR)).Fill(jet1.pt(), deltaR)
   
@@ -179,6 +183,8 @@ class ProcessBase(common_base.CommonBase):
       if not fill_jet1_matches_only:
         self.set_jet_info(jet2, jet1, deltaR)
 
+  def deltaR(self, p1, p2):
+    return np.sqrt(p1.delta_phi_to(p2) ** 2 + (p1.eta() - p2.eta()) ** 2)
   #---------------------------------------------------------------
   # Set 'jet_match' as a matching candidate in user_info of 'jet'
   #---------------------------------------------------------------
@@ -297,7 +303,8 @@ class ProcessBase(common_base.CommonBase):
           set_match = False
             
         # Check matching distance between combined jet and pp-truth
-        if jet_det_combined.delta_R(jet_pp_truth) < self.jet_matching_distance*jetR:
+        # if jet_det_combined.delta_R(jet_pp_truth) < self.jet_matching_distance*jetR: # NOTE: replaced this
+        if self.deltaR(jet_det_combined, jet_pp_truth) < self.jet_matching_distance*jetR:
           h.Fill('deltaR_combined-truth', jet_det_combined.pt(), 1)
         else:
           set_match = False
@@ -359,7 +366,8 @@ class ProcessBase(common_base.CommonBase):
         set_match = False
           
       # Check matching distance between combined jet and pp-truth
-      if jet_combined.delta_R(jet_truth) < self.jet_matching_distance*jetR:
+      # if jet_combined.delta_R(jet_truth) < self.jet_matching_distance*jetR: # NOTE: replaced this line
+      if self.deltaR(jet_combined, jet_truth) < self.jet_matching_distance*jetR:
         h.Fill('deltaR_combined-truth', jet_combined.pt(), 1)
       else:
         set_match = False
@@ -415,9 +423,10 @@ class ProcessBase(common_base.CommonBase):
   # Save all histograms
   #---------------------------------------------------------------
   def save_output_objects(self):
-    
-    outputfilename = os.path.join(self.output_dir, 'AnalysisResults.root')
-    fout = ROOT.TFile(outputfilename, 'update')
+    self.outputfilename = getattr(self, 'outputfilename', 'AnalysisResults.root')
+    # outputfilename = os.path.join(self.output_dir, 'AnalysisResults.root')
+    outputfilepath = os.path.join(self.output_dir, self.outputfilename)
+    fout = ROOT.TFile(outputfilepath, 'update')
     fout.cd()
     
     for attr in dir(self):
@@ -425,7 +434,7 @@ class ProcessBase(common_base.CommonBase):
       obj = getattr(self, attr)
 
       # Write all ROOT histograms and trees to file
-      types = (ROOT.TH1, ROOT.THnBase, ROOT.TTree, ROOT.RooUnfoldResponse)
+      types = (ROOT.TH1, ROOT.THnBase, ROOT.TTree, ROOT.RooUnfoldResponse, ROOT.TEfficiency)
       if isinstance(obj, types):
         obj.Write()
     fout.Write() # NOTE: unfolding extra line
@@ -436,8 +445,9 @@ class ProcessBase(common_base.CommonBase):
   #---------------------------------------------------------------
   def save_thn_th3_objects(self):
     
-    outputfilename = os.path.join(self.output_dir, 'AnalysisResults.root')
-    fout = ROOT.TFile(outputfilename, 'update')
+    self.outputfilename = getattr(self, 'outputfilename', 'AnalysisResults.root')
+    outputfilepath = os.path.join(self.output_dir, self.outputfilename)
+    fout = ROOT.TFile(outputfilepath, 'update')
     fout.cd()
     
     for attr in dir(self):

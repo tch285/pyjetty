@@ -25,6 +25,7 @@ from __future__ import print_function
 
 # General
 import time
+import logging
 
 # Data analysis and plotting
 import numpy as np
@@ -43,6 +44,37 @@ from pyjetty.mputils.csubtractor import CEventSubtractor
 
 # Prevent ROOT from stealing focus when plotting
 ROOT.gROOT.SetBatch(True)
+
+logger = logging.getLogger(__name__)
+handler = logging.StreamHandler()
+handler.setLevel(logging.INFO)
+
+class ColoredFormatter(logging.Formatter):
+    COLORS = {
+        'WARNING': '\033[33m',
+        'ERROR': '\033[31m',
+        'DEBUG': '\033[34m',
+        'INFO': '\033[32m',
+        'CRITICAL': '\033[35m'
+    }
+    RESET = '\033[0m'
+
+    def format(self, record):
+        color = self.COLORS.get(record.levelname, '')
+        if color:
+            # Color the entire line
+            formatted_msg = super().format(record)
+            return f"{color}{formatted_msg}{self.RESET}"
+        return super().format(record)
+
+
+# Create a formatter and set it for the handler
+# formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(funcName)s - %(message)s')
+# handler.setFormatter(formatter)
+handler.setFormatter(ColoredFormatter('%(asctime)s - %(filename)s:%(lineno)d - %(levelname)s - %(funcName)s - %(message)s'))
+
+logger.addHandler(handler)
+logger.setLevel(logging.INFO)
 
 ################################################################
 class ProcessDataBase(process_base.ProcessBase):
@@ -133,7 +165,7 @@ class ProcessDataBase(process_base.ProcessBase):
     # Each dictionary entry stores a list of subconfiguration parameters
     #   The observable list stores the observable setting, e.g. subjetR
     #   The grooming list stores a list of grooming settings {'sd': [zcut, beta]} or {'dg': [a]}
-    self.observable_list = config['process_observables']
+    self.observable_list = config['process_observables'] if 'process_observables' in config else []
     self.obs_settings = {}
     self.obs_grooming_settings = {}
     for observable in self.observable_list:
@@ -166,7 +198,6 @@ class ProcessDataBase(process_base.ProcessBase):
                               is_pp=self.is_pp, use_ev_id_ext=True, is_mc = False)
     self.df_fjparticles = io.load_data(m=self.m)
     self.nEvents = len(self.df_fjparticles.index)
-    print(f'===============foud {self.nEvents}')
     self.nTracks = len(io.track_df.index)
     print('--- {} seconds ---'.format(time.time() - self.start_time))
     
@@ -177,7 +208,7 @@ class ProcessDataBase(process_base.ProcessBase):
     if not self.is_pp:
       self.constituent_subtractor = [CEventSubtractor(max_distance=R_max, alpha=self.alpha, max_eta=self.max_eta, bge_rho_grid_size=self.bge_rho_grid_size, max_pt_correct=self.max_pt_correct, ghost_area=self.ghost_area, distance_type=fjcontrib.ConstituentSubtractor.deltaR) for R_max in self.max_distance]
     
-    print(self)
+    # print(self)
 
     # Find jets and fill histograms
     print('Analyze events...')
@@ -204,17 +235,17 @@ class ProcessDataBase(process_base.ProcessBase):
     else:
       self.hNevents.Fill(1, self.nEvents)
     
-    self.hTrackEtaPhi = ROOT.TH2F('hTrackEtaPhi', 'hTrackEtaPhi', 200, -1., 1., 628, 0., 6.28)
-    self.hTrackPt = ROOT.TH1F('hTrackPt', 'hTrackPt', 300, 0., 300.)
+    # self.hTrackEtaPhi = ROOT.TH2F('hTrackEtaPhi', 'hTrackEtaPhi', 200, -1., 1., 628, 0., 6.28)
+    # self.hTrackPt = ROOT.TH1F('hTrackPt', 'hTrackPt', 300, 0., 300.)
     
-    if not self.is_pp:
-      self.hRho = ROOT.TH1F('hRho', 'hRho', 1000, 0., 1000.)
+    # if not self.is_pp:
+    #   self.hRho = ROOT.TH1F('hRho', 'hRho', 1000, 0., 1000.)
         
-    for jetR in self.jetR_list:
+    # for jetR in self.jetR_list:
       
-      name = 'hZ_R{}'.format(jetR)
-      h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 1.)
-      setattr(self, name, h)
+    #   name = 'hZ_R{}'.format(jetR)
+    #   h = ROOT.TH2F(name, name, 300, 0, 300, 100, 0., 1.)
+    #   setattr(self, name, h)
 
   #---------------------------------------------------------------
   # Main function to loop through and analyze events
@@ -222,9 +253,9 @@ class ProcessDataBase(process_base.ProcessBase):
   def analyze_events(self):
     
     # Fill track histograms
-    print('--- {} seconds ---'.format(time.time() - self.start_time))
-    print('Fill track histograms')
-    [[self.fillTrackHistograms(track) for track in fj_particles] for fj_particles in self.df_fjparticles]
+    # print('--- {} seconds ---'.format(time.time() - self.start_time))
+    # print('Fill track histograms')
+    # [[self.fillTrackHistograms(track) for track in fj_particles] for fj_particles in self.df_fjparticles]
     print('--- {} seconds ---'.format(time.time() - self.start_time))
     
     print('Find jets...')
@@ -443,12 +474,12 @@ class ProcessDataBase(process_base.ProcessBase):
     else:
       jet_pt_ungroomed = jet.pt()
 
-    if self.is_pp or self.fill_Rmax_indep_hists:
+    # if self.is_pp or self.fill_Rmax_indep_hists:
     
-      hZ = getattr(self, 'hZ_R{}'.format(jetR))
-      for constituent in jet.constituents():
-        z = constituent.pt() / jet_pt_ungroomed
-        hZ.Fill(jet_pt_ungroomed, z)
+    #   hZ = getattr(self, 'hZ_R{}'.format(jetR))
+    #   for constituent in jet.constituents():
+    #     z = constituent.pt() / jet_pt_ungroomed
+    #     hZ.Fill(jet_pt_ungroomed, z)
     
     # Loop through each jet subconfiguration (i.e. subobservable / grooming setting)
     # Note that the subconfigurations are defined by the first observable, if multiple are defined

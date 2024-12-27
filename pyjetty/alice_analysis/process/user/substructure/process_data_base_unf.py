@@ -93,9 +93,9 @@ class ProcessDataBase(process_base.ProcessBase):
     # self.RL_max = self.RL_bins[-1]
     # self.RL_bins = self.RL_bins[8:]
     # self.RL_nbins = len(self.RL_bins) - 1
-    print(self.RL_bins)
-    print(self.RL_nbins)
-    print(len(self.RL_bins))
+    # print(self.RL_bins)
+    # print(self.RL_nbins)
+    # print(len(self.RL_bins))
 
 
     # self.pT_truth_bins = np.array(config['pT_truth_bins'])
@@ -203,8 +203,8 @@ class ProcessDataBase(process_base.ProcessBase):
     else:
       self.hNevents.Fill(1, self.nEvents)
     
-    self.hTrackEtaPhi = ROOT.TH2F('hTrackEtaPhi', 'hTrackEtaPhi', 200, -1., 1., 628, 0., 6.28)
-    self.hTrackPt = ROOT.TH1F('hTrackPt', 'hTrackPt', 300, 0., 300.)
+    # self.hTrackEtaPhi = ROOT.TH2F('hTrackEtaPhi', 'hTrackEtaPhi', 200, -1., 1., 628, 0., 6.28)
+    # self.hTrackPt = ROOT.TH1F('hTrackPt', 'hTrackPt', 300, 0., 300.)
     
     if not self.is_pp:
       self.hRho = ROOT.TH1F('hRho', 'hRho', 100, 0., 300.)
@@ -230,9 +230,9 @@ class ProcessDataBase(process_base.ProcessBase):
   def analyze_events(self):
     
     # Fill track histograms
-    print('--- {} seconds ---'.format(time.time() - self.start_time))
-    print('Fill track histograms')
-    [[self.fillTrackHistograms(track) for track in fj_particles] for fj_particles in self.df_fjparticles]
+    # print('--- {} seconds ---'.format(time.time() - self.start_time))
+    # print('Fill track histograms')
+    # [[self.fillTrackHistograms(track) for track in fj_particles] for fj_particles in self.df_fjparticles]
     print('--- {} seconds ---'.format(time.time() - self.start_time))
     
     print('Find jets...')

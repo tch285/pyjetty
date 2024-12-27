@@ -372,7 +372,7 @@ class ProcessMC_ENC(process_mc_base_unf.ProcessMCBase):
 if __name__ == '__main__':
   # Define arguments
   parser = argparse.ArgumentParser(description='Process MC')
-  parser.add_argument('-f', '--inputFile', action='store',
+  parser.add_argument('-i', '--inputFile', action='store',
                       type=str, metavar='inputFile',
                       default='AnalysisResults.root',
                       help='Path of ROOT file containing TTrees')

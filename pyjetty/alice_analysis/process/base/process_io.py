@@ -18,6 +18,8 @@ import sys
 import uproot
 import pandas
 import numpy as np
+from particle import PDGID
+
 
 # Fastjet via python (from external library fjpydev)
 # import fastjet as fj
@@ -437,16 +439,26 @@ class ProcessIO(common_base.CommonBase):
     fj_particles = fjext.vectorize_pt_eta_phi_m(
       df_tracks_accepted['ParticlePt'].values, df_tracks_accepted['ParticleEta'].values,
       df_tracks_accepted['ParticlePhi'].values, m_array, user_index_offset)
+
     if self.is_ENC:
-      pass
-      # if self.is_det_level:
-      #   assert len(df_tracks_accepted) == len(df_tracks_accepted['ParticleEta'].values)
-      #   for i, pid in enumerate(df_tracks_accepted['ParticleEta'].values): #HACK: assigning everything a positive charge on det level for now
-      #     fj_particles[i].set_python_info(1)
+      if self.is_det_level:
+        for i, mcid in enumerate(df_tracks_accepted['ParticleMCIndex'].values):
+          info = jet_info.JetInfo()
+          info.mcid = int(mcid)
+          fj_particles[i].set_python_info(info)
+          # charge attached later, since we need truth pid info
+      else: # is truth level
+        for i, pid in enumerate(df_tracks_accepted['ParticlePID'].values):
+          info = jet_info.JetInfo()
+          info.charge = PDGID(pid).charge
+          info.mcid = i
+          fj_particles[i].set_python_info(info)
+      
+      # if is_ENC:
+      # if is_det_level:
+      #   self.track_columns += ['ParticleMCIndex']
       # else:
-      #   for i, pid in enumerate(df_tracks_accepted['ParticlePID'].values):
-      #     charge = PDGID(pid).charge
-      #     fj_particles[i].set_python_info(int(charge))
+      #   self.track_columns += ['ParticlePID']
     else:
       if self.is_mc:
         for i, (charge, mcid) in enumerate(zip(df_tracks_accepted['ParticleCharge'].values, df_tracks_accepted['ParticleMCid'].values)):

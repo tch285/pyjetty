@@ -621,7 +621,7 @@ class ProcessData_ENC(process_data_base.ProcessDataBase):
 if __name__ == '__main__':
 	# Define arguments
 	parser = argparse.ArgumentParser(description='Process data')
-	parser.add_argument('-f', '--inputFile', action='store',
+	parser.add_argument('-i', '--inputFile', action='store',
 											type=str, metavar='inputFile',
 											default='AnalysisResults.root',
 											help='Path of ROOT file containing TTrees')
