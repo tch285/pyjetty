@@ -1,4 +1,5 @@
 process_observables: ['jet_pt', 'jet_E2C_T_RL', 'jet_E2C_Q_RL', 'jet_E2C_P_RL', 'jet_E2C_M_RL', 'jet_E2C_PM_RL']
+# process_observables: ['jet_pt', 'jet_E2C_T_RL', 'jet_E2C_Q_RL', 'jet_E2C_P_RL', 'jet_E2C_M_RL', 'jet_E2C_PM_RL', 'track_pt_rsn', 'track_eff_pt']
 jetR: [0.4]
 jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
 reject_tracks_fraction: 0.0
@@ -9,18 +10,35 @@ fast_simulation: True
 ENC_fastsim: True # only set to True when fast_simulation is set to True
 ENC_pair_cut: False
 # pair_eff_file: "/global/cfs/projectdirs/alice/wenqing/ENC/PairEff.root"
-pair_eff_file: "/global/cfs/cdirs/alice/mhwang/cEEC/plots/systematics/generator/pair_effs_2d.root"
+# pair_eff_file: "/global/cfs/cdirs/alice/mhwang/cEEC/plots/systematics/generator/pair_effs_2d.root"
+pair_eff_file: "fake"
+pair_eff_file_qpt: "/global/cfs/cdirs/alice/mhwang/cEEC/plots/generator/scaled_qpt.root"
+pair_eff_file_phet: "/global/cfs/cdirs/alice/mhwang/cEEC/plots/generator/scaled_phieta.root"
 
 # new additions by Tucker
+pair_eff_on: True
 RL_binning: [1.0E-3, 1, 30] # the period is important as otherwise PyYAML will read it as a string
 pT_binning: [0, 200, 200]
 pTRL_binning: [1.0E-3, 1.0E+2, 60]
 dp_edges: [0.0, 0.02, 0.06, 0.1, 0.14, 0.2, 0.3, 0.4, 0.6, 1.0, 2.0]
 logRL_binning: [-3, 0, 30]
+pt_rsn_binning: [-0.1, 0.1, 100]
+trk_pt_binning: [0.15, 5, 200]
 
 fill_match_hists: False
 
 # Observable block
+# track_pt_rsn:
+#   common_settings:
+#     xtitle: '#it{R_{L}}'
+#   config2:
+#     trk_thrd: 1.0
+# track_eff_pt:
+#   common_settings:
+#     xtitle: '#it{R_{L}}'
+#   config2:
+#     trk_thrd: 1.0
+
 jet_E2C_T_RL:
 
   common_settings:
@@ -41,14 +59,14 @@ jet_E2C_Q_RL:
   common_settings:
     xtitle: '#it{R_{L}}'
       
-  config1:
-    trk_thrd: 0.5
+  # config1:
+  #   trk_thrd: 0.5
 
   config2:
     trk_thrd: 1.0
     
-  config3:
-    trk_thrd: 0.15
+  # config3:
+  #   trk_thrd: 0.15
     
     
 # Observable block

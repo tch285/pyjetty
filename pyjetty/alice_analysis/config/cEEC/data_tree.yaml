@@ -1,0 +1,26 @@
+# Configuration for:
+#   (a) Processing of ROOT trees into histograms
+#   (b) Analysis of histograms into final result
+#
+# The observables are structured into observable blocks (e.g. theta_g, subjet_z, etc.)
+# each containing multiple individual subconfigurations (e.g. zcut, beta, subjetR, etc.),
+# where each subconfiguration corresponds to a single unfolded result.
+# One can also specify a list of jetR, which will be looped over.
+#
+# The process step is intended to loop over all observables simultaneously
+# The analysis step is intended to run for a single observable block
+
+# process_observables: ['jet_pt_JetPt', 'trk_pt_TrkPt', 'jet-trk_shape_RL_TrkPt_JetPt', 'jet-trk_shape_RL_z_JetPt', 
+#     'jet-trk_ptprofile_RL_TrkPt_JetPt', 'jet-trk_ptprofile_RL_z_JetPt']
+is_pp: True
+jetR: [0.4]
+reject_tracks_fraction: 0.0
+jet_matching_distance: 0.6
+debug_level: 0
+fast_simulation: False
+dry_run: False
+ENC_fastsim: False # only set to True when fast_simulation is set to True
+
+jet_branches:  ['pT/F',  'nconst/I', 'eta/F', 'phi/F']
+part_branches: ['pT/F',  'eta/F', 'phi/F', 'q/F']
+pair_branches: ['pT1/F', 'pT2/F', 'q1/F', 'q2/F', 'pTjet/F', 'weight/F', 'RL/F', 'deta/F', 'dphi/F']

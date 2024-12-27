@@ -1,0 +1,148 @@
+# Configuration for intermediary TTree processing into final analysis output objects
+
+targets: 
+  # - E2C_T_det
+  # - E2C_Q_det
+  # - E2C_P_det
+  # - E2C_M_det
+  # - E2C_PM_det
+  # - E2C_T_gen
+  # - E2C_Q_gen
+  # - E2C_P_gen
+  # - E2C_M_gen
+  # - E2C_PM_gen
+  # - jet_pt_det
+  - jet_pt_gen
+  - jet_pt_gen_ismatched
+  # - jet_pt_gen_detvsgen
+  - jet_pt_matched_det
+  - jet_pt_matched_gen
+  - jet_pt_detvsgen
+  - jer
+  # - part_gen_pt
+  # - part_reco_gen_pt
+  # - rsn
+
+
+jetR: 0.4
+
+bins:
+  pT_bins: ['lin', 0, 200, 200]
+  # RL_bins: ['log', 1.0e-3, 1, 30]
+  # rsn_part_bins: ['lin', -0.1, 0.1, 100]
+  JER_bins: ['lin', -1.0, 1.0, 200]
+  # pT_part_bins: ['log', 0.15, 5, 200]
+
+rules:
+  cEEC:
+    params:
+      ptcut:
+        # - 0.15
+        - 1.0
+        # - 2.0
+    dir:
+      - [f, pT1 > ptcut && pT2 > ptcut]
+    cEEC_det:
+      tree: pairs_det_matched
+      dir:
+        - [d, nweight, pT1 * pT2 / match_pT / match_pT]
+      E2C_T_det: 
+        dir:
+          - [h, 2, "det eec T;jet pt;R_{L}", pT_bins, RL_bins, pTjet, RL, weight]
+      E2C_Q_det: 
+        dir:
+          - [d, qw, q1 * q2 * weight]
+          - [h, 2, "det eec Q;jet pt;R_{L}", pT_bins, RL_bins, pTjet, RL, qw]
+      E2C_P_det:
+        dir:
+          - [f, q1 > 0 && q2 > 0]
+          - [h, 2, "det eec P;jet pt;R_{L}", pT_bins, RL_bins, pTjet, RL, weight]
+      E2C_M_det:
+        dir:
+          - [f, q1 < 0 && q2 < 0]
+          - [h, 2, "det eec M;jet pt;R_{L}", pT_bins, RL_bins, pTjet, RL, weight]
+      E2C_PM_det:
+        dir:
+          - [f, (q1 * q2) < 0]
+          - [h, 2, "det eec PM;jet pt;R_{L}", pT_bins, RL_bins, pTjet, RL, weight]
+      E2C_T_detpair: 
+        dir:
+          - [h, 2, "det eec T;jet pt;R_{L}", pT_bins, RL_bins, match_pT, RL, nweight]
+      E2C_Q_detpair: 
+        dir:
+          - [d, nqw, q1 * q2 * nweight]
+          - [h, 2, "det eec Q;jet pt;R_{L}", pT_bins, RL_bins, match_pT, RL, nqw]
+      E2C_P_detpair:
+        dir:
+          - [f, q1 > 0 && q2 > 0]
+          - [h, 2, "det eec P;jet pt;R_{L}", pT_bins, RL_bins, match_pT, RL, nweight]
+      E2C_M_detpair:
+        dir:
+          - [f, q1 < 0 && q2 < 0]
+          - [h, 2, "det eec M;jet pt;R_{L}", pT_bins, RL_bins, match_pT, RL, nweight]
+      E2C_PM_detpair:
+        dir:
+          - [f, (q1 * q2) < 0]
+          - [h, 2, "det eec PM;jet pt;R_{L}", pT_bins, RL_bins, match_pT, RL, nweight]
+    cEEC_gen:
+      tree: pairs_gen_matched
+      E2C_T_gen: 
+        dir:
+          - [h, 2, "gen eec T;jet pt;R_{L}", pT_bins, RL_bins, pTjet, RL, weight]
+      E2C_Q_gen: 
+        dir:
+          - [d, qw, q1 * q2 * weight]
+          - [h, 2, "gen eec Q;jet pt;R_{L}", pT_bins, RL_bins, pTjet, RL, qw]
+      E2C_P_gen:
+        dir:
+          - [f, q1 > 0 && q2 > 0]
+          - [h, 2, "gen eec P;jet pt;R_{L}", pT_bins, RL_bins, pTjet, RL, weight]
+      E2C_M_gen:
+        dir:
+          - [f, q1 < 0 && q2 < 0]
+          - [h, 2, "gen eec M;jet pt;R_{L}", pT_bins, RL_bins, pTjet, RL, weight]
+      E2C_PM_gen:
+        dir:
+          - [f, (q1 * q2) < 0]
+          - [h, 2, "gen eec PM;jet pt;R_{L}", pT_bins, RL_bins, pTjet, RL, weight]
+  jetpt:
+    gen:
+      tree: jets_gen
+      jet_pt_gen:
+        dir:
+          - [h, 1, gen jet pt;jet pt;cts, pT_bins, pT]
+      jet_pt_gen_ismatched:
+        dir:
+          - [f, "match_pT > 0"]
+          - [h, 1, gen jet pt;jet pt;cts, pT_bins, pT]
+    det_matched:
+      tree: jets_det_matched
+      jet_pt_matched_det:
+        dir:
+          - [h, 1, det jet pt;jet pt;cts, pT_bins, pT]
+      jet_pt_detvsgen:
+        dir:
+          - [h, 2, "det vs gen (det);det pt;gen pt", pT_bins, pT_bins, pT, match_pT]
+    gen_matched:
+      tree: jets_gen_matched
+      jet_pt_matched_gen:
+        dir:
+          - [h, 1, gen jet pt;jet pt;cts, pT_bins, pT]
+      jer:
+        dir:
+          - [d, jer, (match_pT - pT) / pT]
+          - [h, 2, jer;jer (det-truth)/truth;truth jet pt, JER_bins, pT_bins, jer, pT ]
+  # part:
+  #   tree: parts_gen
+  #   part_gen_pt:
+  #     dir:
+  #       - [h, 1, part pt gen;pt;cts, pT_part_bins, pT]
+  #   part_reco_gen_pt:
+  #     dir:
+  #       - [f, match_pT > 0]
+  #       - [h, 1, part pt gen;pt;cts, pT_part_bins, pT]
+  #   rsn:
+  #     dir:
+  #       - [f, match_pT > 0]
+  #       - [d, rsn, (match_pT - pT) / pT]
+  #       - [h, 2, "pt rsn;gen pt;rsn [(det-gen) / gen]", pT_part_bins, rsn_part_bins, pT, rsn]

@@ -23,6 +23,8 @@ fast_simulation: False
 ENC_fastsim: False # only set to True when fast_simulation is set to True
 ENC_pair_cut: False
 
+fill_match_hists: True
+
 # new additions by Tucker
 RL_binning: [1.0E-3, 1, 30] # the period is important as otherwise PyYAML will read it as a string
 pT_binning: [0, 200, 200]

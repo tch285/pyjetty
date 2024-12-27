@@ -1,0 +1,65 @@
+# Configuration for intermediary TTree processing into final analysis output objects
+
+targets: 
+  - E2C_T
+  - E2C_Q
+  - E2C_P
+  - E2C_M
+  - E2C_PM
+  - jet_pt
+
+jetR: 0.4
+
+bins:
+  pT_bins: ['lin', 0, 200, 200]
+  RL_bins: ['log', 1.0e-3, 1, 30]
+  pT_part_bins: ['lin', 0, 300, 300]
+  eta_bins: ['lin', -1.0, 1.0, 200]
+  phi_bins: ['lin', 0.0, 6.28, 628]
+
+
+rules:
+  cEEC:
+    params:
+      ptcut:
+        - 0.15
+        - 0.5
+        - 1.0
+        - 2.0
+    dir:
+      - [f, pT1 > ptcut && pT2 > ptcut]
+    cEEC:
+      tree: pairs
+      E2C_T:
+        dir:
+          - [h, 2, "eec T;jet pt;R_{L}", pT_bins, RL_bins, pTjet, RL, weight]
+      E2C_Q: 
+        dir:
+          - [d, qw, q1 * q2 * weight]
+          - [h, 2, "eec Q;jet pt;R_{L}", pT_bins, RL_bins, pTjet, RL, qw]
+      E2C_P:
+        dir:
+          - [f, q1 > 0 && q2 > 0]
+          - [h, 2, "eec P;jet pt;R_{L}", pT_bins, RL_bins, pTjet, RL, weight]
+      E2C_M:
+        dir:
+          - [f, q1 < 0 && q2 < 0]
+          - [h, 2, "eec M;jet pt;R_{L}", pT_bins, RL_bins, pTjet, RL, weight]
+      E2C_PM:
+        dir:
+          - [f, (q1 * q2) < 0]
+          - [h, 2, "eec PM;jet pt;R_{L}", pT_bins, RL_bins, pTjet, RL, weight]
+  jetpt:
+    det:
+      tree: jets
+      jet_pt:
+        dir:
+          - [h, 1, det jet pt;jet pt;cts, pT_bins, pT]
+  part:
+    tree: parts
+    part_pt:
+      dir:
+        - [h, 1, part pt;pt;cts, pT_part_bins, pT]
+    part_eta_phi:
+      dir:
+        - [h, 2, "part eta phi;eta;phi", eta_bins, phi_bins, eta, phi]
