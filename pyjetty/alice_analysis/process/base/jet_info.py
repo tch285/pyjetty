@@ -25,6 +25,8 @@ class JetInfo(common_base.CommonBase):
     self.closest_jet = None
     self.closest_jet_deltaR = 1000.
     self.match = None
+    self.perpcone1 = None
+    self.perpcone2 = None
 
     # Store the associated truth info and particle charge (used primarily for applying pair efficeincy in the fast simulation)
     self.particle_truth = None
@@ -37,6 +39,8 @@ class JetInfo(common_base.CommonBase):
     self.closest_jet = None
     self.closest_jet_deltaR = 1000.
     self.match = None
+    self.perpcone1 = None
+    self.perpcone2 = None
 
   def clear_part_info(self):
     self.particle_truth = None
@@ -48,6 +52,8 @@ class JetInfo(common_base.CommonBase):
     self.closest_jet = None
     self.closest_jet_deltaR = 1000.
     self.match = None
+    self.perpcone1 = None
+    self.perpcone2 = None
     
     self.particle_truth = None
     self.particle_det = None

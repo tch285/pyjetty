@@ -1,0 +1,28 @@
+jetR: [0.4] #, 0.7]
+jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
+mc_fraction_threshold: 0.5
+reject_tracks_fraction: 0.0
+eta_max: 0.9
+debug_level: 0
+dry_run: False
+fast_simulation: False
+ENC_fastsim: False # only set to True when fast_simulation is set to True
+ENC_pair_cut: False
+
+do_median_subtraction: True
+do_perpendicular_cone: True
+randomize_cone: False
+# do_rho_subtraction: True
+do_feedin_check: False
+do_reshuffle: False
+# mult_threshold: [73,184] #122
+mult_threshold: [] #122
+
+
+event_branches:    ['rho_det/F', 'rho_gen/F', 'areaC_det/F', 'areaC_gen/F', 'mult/F']
+jet_det_branches:  ['pT/F', 'pTsub/F', 'area/F', 'nconst/I', 'eta/F', 'phi/F']
+jet_gen_branches:  ['pT/F', 'pTsub/F', 'area/F', 'nconst/I', 'eta/F', 'phi/F']
+part_det_branches: ['pT/F',  'eta/F', 'phi/F', 'q/F', 'match_pT/F']
+part_gen_branches: ['pT/F',  'eta/F', 'phi/F', 'q/F', 'match_pT/F']
+pair_det_branches: ['pT1/F', 'pT2/F', 'q1/F', 'q2/F', 'id1/F', 'id2/F', 'pTjet/F', 'pTjetsub/F', 'weight/F', 'RL/F', 'deta/F', 'dphi/F']
+pair_gen_branches: ['pT1/F', 'pT2/F', 'q1/F', 'q2/F', 'id1/F', 'id2/F', 'pTjet/F', 'pTjetsub/F', 'weight/F', 'RL/F', 'deta/F', 'dphi/F']

@@ -34,9 +34,25 @@ logger = logging.getLogger(__name__)
 handler = logging.StreamHandler()
 handler.setLevel(logging.INFO)
 
-# Create a formatter and set it for the handler
-formatter = logging.Formatter('%(asctime)s - %(filename)s:%(lineno)d - %(levelname)s - %(funcName)s - %(message)s')
-handler.setFormatter(formatter)
+class ColoredFormatter(logging.Formatter):
+    COLORS = {
+        'WARNING': '\033[33m',
+        'ERROR': '\033[31m',
+        'DEBUG': '\033[34m',
+        'INFO': '\033[32m',
+        'CRITICAL': '\033[35m'
+    }
+    RESET = '\033[0m'
+
+    def format(self, record):
+        color = self.COLORS.get(record.levelname, '')
+        if color:
+            # Color the entire line
+            formatted_msg = super().format(record)
+            return f"{color}{formatted_msg}{self.RESET}"
+        return super().format(record)
+
+handler.setFormatter(ColoredFormatter('%(asctime)s - %(filename)s:%(lineno)d - %(levelname)s - %(funcName)s - %(message)s'))
 
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
@@ -51,7 +67,8 @@ class ProcessIO(common_base.CommonBase):
                track_tree_name='tree_Particle', event_tree_name='tree_event_char',
                output_dir='', is_pp=True, min_cent=0., max_cent=10.,
                use_ev_id_ext=True, is_jetscape=False, holes=False,
-               event_plane_range=None, skip_event_tree=False, is_ENC=False, is_det_level=False, is_mc = True, **kwargs):
+               event_plane_range=None, skip_event_tree=False, is_ENC=False,
+               is_det_level=False, is_mc = True, load_mult = False, **kwargs):
     super(ProcessIO, self).__init__(**kwargs)
     self.input_file = input_file
     self.output_dir = output_dir
@@ -72,6 +89,7 @@ class ProcessIO(common_base.CommonBase):
       self.output_dir += '/'
     self.reset_dataframes()
     self.is_mc = is_mc
+    self.load_mult = load_mult
     
     # Set the combination of fields that give a unique event id
     self.unique_identifier =  ['run_number', 'ev_id']
@@ -87,6 +105,8 @@ class ProcessIO(common_base.CommonBase):
       self.event_columns += ['centrality']
       self.min_centrality = min_cent
       self.max_centrality = max_cent
+    if self.load_mult:
+      self.event_columns += ['V0Amult']
     if is_jetscape:
       self.event_columns += ['event_plane_angle']
     
@@ -133,11 +153,10 @@ class ProcessIO(common_base.CommonBase):
       self.charge_factor = 3
     else:
       self.charge_factor = 1
-    # self.charge_factor = 1 if self.is_det_level and not self.is_ENC else 3 # NOTE: should be careful with herwig
     logger.info(f"Charge normalization factor set to {self.charge_factor}.")
 
     self.track_df = self.load_dataframe()
-    
+
     if self.reject_tracks_fraction > 1e-3:
       n_remove = int(reject_tracks_fraction * len(self.track_df.index))
       logger.warning(f'Removing {n_remove} of {len(self.track_df.index)} tracks from {self.track_tree_name}.')
@@ -159,23 +178,17 @@ class ProcessIO(common_base.CommonBase):
   #     run_number, ev_id, ParticlePt, ParticleEta, ParticlePhi
   #---------------------------------------------------------------
   def load_dataframe(self):
-
     # Load event tree into dataframe
     if not self.skip_event_tree:
-      # event_tree = None
       event_df = None
       event_tree_name = self.tree_dir + self.event_tree_name
       with uproot.open(self.input_file)[event_tree_name] as event_tree:
         self.event_df_orig = uproot.concatenate(event_tree, self.event_columns, library="pd")
     
       # Check if there are duplicated event ids
-      #print(self.event_df_orig)
-      #d = self.event_df_orig.duplicated(self.unique_identifier, keep=False)
-      #print(self.event_df_orig[d])
       n_duplicates = sum(self.event_df_orig.duplicated(self.unique_identifier))
       if n_duplicates > 0:
-        raise ValueError(
-          "There appear to be %i duplicate events in the event dataframe" % n_duplicates)
+        raise ValueError(f"There appear to be {n_duplicates} duplicate events in the event dataframe")
       
       # Apply event selection
       self.event_df_orig.reset_index(drop=True)
@@ -196,36 +209,32 @@ class ProcessIO(common_base.CommonBase):
     
     # Apply hole selection, in case of jetscape
     if self.is_jetscape:
-        if self.holes:
-            track_criteria = 'status == -1'
-        else:
-            track_criteria = 'status == 0'
-        track_df_orig = track_df_orig.query(track_criteria)
-        track_df_orig.reset_index(drop=True)
+      if self.holes:
+        track_criteria = 'status == -1'
+      else:
+        track_criteria = 'status == 0'
+      track_df_orig = track_df_orig.query(track_criteria)
+      track_df_orig.reset_index(drop=True)
     
     # Check if there are duplicated tracks
-    #print(track_df_orig)
-    #d = track_df_orig.duplicated(self.track_columns, keep=False)
-    #print(track_df_orig[d])
     n_duplicates = sum(track_df_orig.duplicated(self.track_columns))
     if n_duplicates > 0:
       raise ValueError(
         "There appear to be %i duplicate particles in the track dataframe" % n_duplicates)
-
+    logger.debug(f"Track original dataframe:\n{track_df_orig}")
+    logger.debug(f"Event original dataframe:\n{event_df}")
     # Merge event info into track tree
     if self.skip_event_tree:
       self.track_df = track_df_orig
     else:
       self.track_df = pandas.merge(track_df_orig, event_df, on=self.unique_identifier)
-    
+
     # Check if there are duplicated tracks in the merge dataframe
-    #print(self.track_df)
-    #d = self.track_df.duplicated(self.track_columns, keep=False)
-    #print(self.track_df[d])
     n_duplicates = sum(self.track_df.duplicated(self.track_columns))
     if n_duplicates > 0:
-      sys.exit('ERROR: There appear to be {} duplicate particles in the merged dataframe'.format(n_duplicates))
-      
+      logger.critical(f'There appear to be {n_duplicates} duplicate particles in the merged dataframe')
+      sys.exit(1)
+    self.event_df = event_df
     return self.track_df
 
   #---------------------------------------------------------------
@@ -344,16 +353,7 @@ class ProcessIO(common_base.CommonBase):
 
       # (i) Group the track dataframe by event
       #     track_df_grouped is a DataFrameGroupBy object with one track dataframe per event
-      # track_df_grouped = None
       track_df_grouped = self.track_df.groupby(self.unique_identifier)
-      # logger.info('debug2',type(track_df_grouped))
-      logger.debug(track_df_grouped.aggregate('sum'))
-      # print(track_df_grouped)
-      # print('debug2',track_df_grouped.columns['ParticlePID'].values)
-    
-      # (ii) Transform the DataFrameGroupBy object to a SeriesGroupBy of fastjet particles
-      df_fjparticles = None
-      
 
       if self.is_ENC:
         df_fjparticles_orig = track_df_grouped.apply(
@@ -361,24 +361,19 @@ class ProcessIO(common_base.CommonBase):
         if self.is_det_level:
           df_fjparticles_aux = track_df_grouped.apply(
           self.get_particles_mc_index, m=m, offset_indices=offset_indices, random_mass=random_mass, min_pt=min_pt)
-          print('debug3 aux: mcid')
-          print(df_fjparticles_aux)
           df_fjparticles = pandas.DataFrame({"fj_particle": df_fjparticles_orig, "ParticleMCIndex": df_fjparticles_aux})
         else:
           df_fjparticles_aux = track_df_grouped.apply(
           self.get_particles_pid, m=m, offset_indices=offset_indices, random_mass=random_mass, min_pt=min_pt)
-          print('debug3 aux: pid')
-          print(df_fjparticles_aux)
           df_fjparticles = pandas.DataFrame({"fj_particle": df_fjparticles_orig, "ParticlePID": df_fjparticles_aux})
       else:
         df_fjparticles = track_df_grouped.apply(
         self.get_fjparticles, m=m, offset_indices=offset_indices, random_mass=random_mass, min_pt=min_pt)
       
-      logger.info(f'Combined:\n{df_fjparticles}')
+      logger.debug(f'Combined:\n{df_fjparticles}')
       
       # df_fjparticles = pandas.DataFrame({"fj_particle": track_df_grouped.apply(
       #   self.get_fjparticles, m=m, offset_indices=offset_indices, random_mass=random_mass, min_pt=min_pt), "ParticleMCIndex": track_df_grouped["ParticleMCIndex"]})
-      
     
     else:
       logger.info("Transforming the track DataFrame into a DataFrame of FJ particles per track...")
@@ -406,16 +401,13 @@ class ProcessIO(common_base.CommonBase):
   # Return fastjet:PseudoJets from a given track dataframe
   #---------------------------------------------------------------
   def get_fjparticles(self, df_tracks, m, offset_indices=False, random_mass=False, min_pt=0.):
-    
     # If offset_indices is true, then offset the user_index by a large negative value
     user_index_offset = 0
     if offset_indices:
         user_index_offset = int(-1e6)
-        
+
     # Apply a pt cut
     df_tracks_accepted = df_tracks[df_tracks.ParticlePt > min_pt]
-
-    # print('debug2',df_tracks_accepted)
 
     m_array = np.full((df_tracks_accepted['ParticlePt'].values.size), m)
 
@@ -453,12 +445,6 @@ class ProcessIO(common_base.CommonBase):
           info.charge = PDGID(pid).charge
           info.mcid = i
           fj_particles[i].set_python_info(info)
-      
-      # if is_ENC:
-      # if is_det_level:
-      #   self.track_columns += ['ParticleMCIndex']
-      # else:
-      #   self.track_columns += ['ParticlePID']
     else:
       if self.is_mc:
         for i, (charge, mcid) in enumerate(zip(df_tracks_accepted['ParticleCharge'].values, df_tracks_accepted['ParticleMCid'].values)):
@@ -471,14 +457,19 @@ class ProcessIO(common_base.CommonBase):
           info = jet_info.JetInfo()
           info.charge = charge / self.charge_factor
           fj_particles[i].set_python_info(info)
-    return fj_particles
-    # if self.is_ENC:
-    #   if self.is_det_level:
-    #     return fj_particles, df_tracks_accepted['ParticleMCIndex'].values
-    #   else:
-    #     return fj_particles, df_tracks_accepted['ParticlePID'].values
-    # else:
-    #   return fj_particles
+    # return fj_particles
+    if self.load_mult:
+      assert (df_tracks_accepted['V0Amult'].values[0] == df_tracks_accepted['V0Amult'].values).all()
+      return pandas.DataFrame({
+          'parts': [fj_particles],
+          'mult': df_tracks_accepted['V0Amult'].values[0],
+      })
+    else:
+      return fj_particles
+    # return pandas.Series({
+    #     'fj': fj_particles,
+    #     'v0amult': df_tracks_accepted['V0Amult'].values[0],
+    # })`
 
   #---------------------------------------------------------------
   # Return associated mc indices from a given track dataframe

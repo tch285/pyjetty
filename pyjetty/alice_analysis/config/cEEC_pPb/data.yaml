@@ -1,0 +1,65 @@
+# process_observables: ['jet_ENC_RL', 'jet_pt', 'jet_EEC_weight2_RL', 'jet_EEC_noweight_RL']
+process_observables: ['jet_ENC_RL', 'jet_pt']
+jetR: [0.4] #, 0.7]
+jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
+mc_fraction_threshold: 0.5
+reject_tracks_fraction: 0.0
+eta_max: 0.9
+debug_level: 0
+dry_run: False
+fast_simulation: False
+ENC_fastsim: False # only set to True when fast_simulation is set to True
+ENC_pair_cut: False
+
+do_median_subtraction: True
+do_perpendicular_cone: True
+randomize_cone: False
+# do_rho_subtraction: True
+do_feedin_check: False
+do_reshuffle: False
+# mult_threshold: [73,184] #122
+mult_threshold: [] #122
+
+constituent_subtractor:
+  max_distance: [0.25]
+  main_R_max: 0.25
+  alpha: 0
+  max_eta: 0.9
+  bge_rho_grid_size: 1.0
+  max_pt_correct: 100
+  ghost_area: 0.01
+emb_file_list: '/global/cfs/projectdirs/alice/alicepro/hiccup/rstorage/alice/data/LHC16qt/776/files.txt' # data list
+# emb_file_list: '/global/cfs/cdirs/alice/anjali/mypyjetty/pyjetty/pyjetty/alice_analysis/process/user/anjali/file_list_emb.txt' # test list
+# emb_file_list: '/global/cfs/cdirs/alice/anjali/LHC18f3/files.txt' # dpmjet list
+do_emb_rotation: False
+
+
+# Observable block
+jet_ENC_RL:
+
+  common_settings:
+    xtitle: '#it{R_{L}}'
+    # ytitle: '#frac{1}{#it{#sigma}_{jet}} #frac{d#it{#sigma}}{d#it{R_{L}}}'
+    # pt_bins_reported: [40, 80, 120]
+    # max_reg_param: 10
+    # plot_overlay_list:
+    #   - ['config1', 'config2']
+
+  # config1:
+  #   trk_thrd: 0.15
+  # config2:
+  #   trk_thrd: 0.5
+  config3:
+    trk_thrd: 1.0
+  # config4:
+  #   trk_thrd: 2.0
+
+jet_pt:
+  # config1:
+  #   trk_thrd: 0.15
+  # config2:
+  #   trk_thrd: 0.5
+  config3:
+    trk_thrd: 1.0
+  # config4:
+  #   trk_thrd: 2.0

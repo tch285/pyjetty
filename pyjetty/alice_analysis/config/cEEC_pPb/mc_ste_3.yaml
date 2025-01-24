@@ -1,0 +1,58 @@
+# process_observables: ['jet_ENC_RL', 'jet_pt', 'jet_EEC_weight2_RL']
+process_observables: ['jet_ENC_RL', 'jet_pt']
+jetR: [0.4] #, 0.7]
+jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
+mc_fraction_threshold: 0.5
+reject_tracks_fraction: 0.03
+eta_max: 0.9
+debug_level: 0
+dry_run: False
+fast_simulation: False
+ENC_fastsim: False # only set to True when fast_simulation is set to True
+ENC_pair_cut: False
+
+do_median_subtraction: True
+do_perpendicular_cone: True
+randomize_cone: False
+do_rho_subtraction: True
+do_feedin_check: True
+
+constituent_subtractor:
+  max_distance: [0.25]
+  main_R_max: 0.25
+  alpha: 0
+  max_eta: 0.9
+  bge_rho_grid_size: 1.0
+  max_pt_correct: 100
+  ghost_area: 0.01
+
+thermal_model:
+  beta: 0.5      # R02: 0.4, R04: 0.5
+  N_avg: 0
+  sigma_N: 0
+
+pt_dep_track_rej: False
+# pt_dep_track_rej_file: "/global/cfs/cdirs/alice/mhwang/cEEC/reference/ste_unc.npz"
+# pt_dep_track_rej_seed: False
+emb_file_list: '/global/cfs/projectdirs/alice/alicepro/hiccup/rstorage/alice/data/LHC16qt/776/files.txt'
+do_emb_rotation: False
+
+jet_ENC_RL:
+  config1:
+    trk_thrd: 0.15
+  config2:
+    trk_thrd: 0.5
+  config3:
+    trk_thrd: 1.0
+  config4:
+    trk_thrd: 2.0
+
+jet_pt:
+  config1:
+    trk_thrd: 0.15
+  config2:
+    trk_thrd: 0.5
+  config3:
+    trk_thrd: 1.0
+  config4:
+    trk_thrd: 2.0

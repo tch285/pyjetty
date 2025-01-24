@@ -1,0 +1,57 @@
+# process_observables: ['jet_ENC_RL', 'jet_pt', 'jet_EEC_weight2_RL']
+process_observables: ['track_pairdist_T', 'track_pairdist_M', 'track_pairdist_P', 'track_pairdist_PM']
+jetR: [0.4] #, 0.7]
+jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
+mc_fraction_threshold: 0.5
+reject_tracks_fraction: 0.0
+eta_max: 0.9
+debug_level: 0
+dry_run: False
+fast_simulation: False
+ENC_fastsim: False # only set to True when fast_simulation is set to True
+ENC_pair_cut: False
+
+do_median_subtraction: True
+do_perpendicular_cone: True
+randomize_cone: False
+do_rho_subtraction: True
+do_feedin_check: True
+
+RL_binning: [1.0E-3, 1, 30] # the period is important as otherwise PyYAML will read it as a string
+pT_binning: [0, 200, 200]
+pTRL_binning: [1.0E-3, 1.0E+2, 60]
+kT_binning: [0, 10, 100]
+pairdist_binning: [-0.2, 0.2, 200]
+
+do_track_mc_matching: True
+strict_mc_matching: False
+
+constituent_subtractor:
+  max_distance: [0.25]
+  main_R_max: 0.25
+  alpha: 0
+  max_eta: 0.9
+  bge_rho_grid_size: 1.0
+  max_pt_correct: 100
+  ghost_area: 0.01
+
+thermal_model:
+  beta: 0.5      # R02: 0.4, R04: 0.5
+  N_avg: 0
+  sigma_N: 0
+
+emb_file_list: '/global/cfs/projectdirs/alice/alicepro/hiccup/rstorage/alice/data/LHC16qt/776/files.txt'
+do_emb_rotation: False
+
+track_pairdist_P:
+  config1:
+    trk_thrd: 1.0
+track_pairdist_M:
+  config1:
+    trk_thrd: 1.0
+track_pairdist_PM:
+  config1:
+    trk_thrd: 1.0
+track_pairdist_T:
+  config1:
+    trk_thrd: 1.0
