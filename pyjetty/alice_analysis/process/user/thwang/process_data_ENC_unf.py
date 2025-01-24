@@ -7,24 +7,19 @@
   Author: James Mulligan (james.mulligan@berkeley.edu)
 """
 
-from __future__ import print_function
-
 # General
 import os
 import sys
 import argparse
-import sys
 
 # Data analysis and plotting
 import ROOT
-import yaml
 import numpy as np
 import array 
 import math
 
 # Fastjet via python (from external library heppy)
 import fastjet as fj
-import fjcontrib
 import ecorrel
 
 # Base class

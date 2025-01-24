@@ -6,8 +6,6 @@
   Author: James Mulligan (james.mulligan@berkeley.edu)
 """
 
-from __future__ import print_function
-
 # General
 import os
 import sys
@@ -32,9 +30,25 @@ logger = logging.getLogger(__name__)
 handler = logging.StreamHandler()
 handler.setLevel(logging.INFO)
 
-# Create a formatter and set it for the handler
-formatter = logging.Formatter('%(asctime)s - %(filename)s:%(lineno)d - %(levelname)s - %(funcName)s - %(message)s')
-handler.setFormatter(formatter)
+class ColoredFormatter(logging.Formatter):
+    COLORS = {
+        'WARNING': '\033[33m',
+        'ERROR': '\033[31m',
+        'DEBUG': '\033[34m',
+        'INFO': '\033[32m',
+        'CRITICAL': '\033[35m'
+    }
+    RESET = '\033[0m'
+
+    def format(self, record):
+        color = self.COLORS.get(record.levelname, '')
+        if color:
+            # Color the entire line
+            formatted_msg = super().format(record)
+            return f"{color}{formatted_msg}{self.RESET}"
+        return super().format(record)
+
+handler.setFormatter(ColoredFormatter('%(asctime)s - %(filename)s:%(lineno)d - %(levelname)s - %(funcName)s - %(message)s'))
 
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)

@@ -1,38 +1,29 @@
 #!/usr/bin/env python3
 
 """
-Analysis class to read a ROOT TTree of MC track information
-and do jet-finding, and save response histograms.
+Tree class class to read a ROOT TTree of data track information
+and produce TTrees of relevant particle, jet, and pair information
 
-Author: James Mulligan (james.mulligan@berkeley.edu)
+Author: Tucker Hwang (tucker_hwang@berkeley.edu)
 """
 
 import argparse
 import itertools
-
 import logging
-
-# General
 import os
 import sys
 from array import array
 
-# Fastjet via python (from external library heppy)
 import fastjet as fj
-
-# Data analysis and plotting
 import numpy as np
 import ROOT
 import yaml
-
-# Analysis utilities
 from pyjetty.alice_analysis.process.user.substructure import process_data_base
 
 logger = logging.getLogger(__name__)
 
 ROOT.TH1.SetDefaultSumw2()
 ROOT.TH2.SetDefaultSumw2()
-
 
 ################################################################
 class Generator_Tree_Data_ENC(process_data_base.ProcessDataBase):
@@ -77,84 +68,7 @@ class Generator_Tree_Data_ENC(process_data_base.ProcessDataBase):
             )
         ]
 
-        # if self.ENC_fastsim:
-        # 	self.pair_eff_file = self.pair_eff_file
-        # 	self.dp_edges = np.array(self.dp_bins) # yedges
-        # 	self.pair_effs = {}
-        # 	for ptype in ["P", "M", "PM"]:
-        # 		self.pair_effs[ptype] = self.get_efficiency_array(self.pair_eff_file, f"h_pair_eff_{ptype}_0miss")
-        # 	self.scale_effs()
-
-    def scale_effs(self):
-        for ptype in ["P", "M", "PM"]:
-            eff = self.pair_effs[ptype]
-            for ybin in range(self.dp_nbins):
-                eff_slice = eff[:, ybin]
-                slice_max = eff_slice.max()
-                eff[:, ybin] *= 1 / slice_max
-            logger.info(ptype)
-            for ybin in range(self.dp_nbins):
-                logger.info(ybin)
-                print(eff[:, ybin])
-
-    def get_efficiency_array(self, file_path, efficiency_name):
-        """
-        Extract efficiency values into a 2D numpy array
-
-        Parameters:
-        -----------
-        file_path : str
-            Path to ROOT file
-        efficiency_name : str
-            Name of TEfficiency object in file
-
-        Returns:
-        --------
-        tuple : (eff_array, x_edges, y_edges)
-            2D numpy array of efficiency values and bin edges
-        """
-        with ROOT.TFile.Open(file_path, "read") as f:
-            eff = f.Get(efficiency_name)
-            total_hist = eff.GetTotalHistogram()
-
-            nx = total_hist.GetNbinsX()
-            ny = total_hist.GetNbinsY()
-
-            # Create 2D numpy array to store efficiencies
-            eff_array = np.zeros((nx, ny))
-
-            # Fill the array with efficiency values
-            for ix in range(1, nx + 1):
-                for iy in range(1, ny + 1):
-                    global_bin = eff.GetGlobalBin(ix, iy)
-                    eff_array[ix - 1, iy - 1] = eff.GetEfficiency(global_bin)
-
-            # Get bin edges
-            # x_edges = np.array([total_hist.GetXaxis().GetBinLowEdge(i)
-            # 				for i in range(1, nx + 2)])
-            # y_edges = np.array([total_hist.GetYaxis().GetBinLowEdge(i)
-            # 				for i in range(1, ny + 2)])
-
-            # return eff_array, x_edges, y_edges
-            return eff_array
-
-    def get_pair_eff(self, RL, dp, q1, q2):
-        if q1 * q2 < 0:
-            ptype = "PM"
-        elif q1 > 0 and q2 > 0:
-            ptype = "P"
-        else:
-            ptype = "M"
-        eff = self.pair_effs[ptype]
-
-        x_bin = np.searchsorted(self.logRL_bins, np.log10(RL), side="left") - 1
-        y_bin = np.searchsorted(self.dp_bins, dp, side="left") - 1
-
-        # Check if point is within bounds
-        if 0 <= x_bin < eff.shape[0] and 0 <= y_bin < eff.shape[1]:
-            return eff[x_bin, y_bin]
-        else:
-            return 1
+        self.tree2arr = {"I": "i", "F": "f", "D": "d", "L": "l", "O": "B", "B": "b"}
 
     # ---------------------------------------------------------------
     # Calculate pair distance of two fastjet particles
@@ -221,11 +135,9 @@ class Generator_Tree_Data_ENC(process_data_base.ProcessDataBase):
         # store the ROOT TTree type names and the corresponding Python
         # array.array types in this dict
         for jetR in self.jetR_list:
-            self.tree2arr = {"I": "i", "F": "f", "D": "d", "L": "l", "O": "B", "B": "b"}
             self.part_tree = ROOT.TTree("parts", "particles")
             self.jet_tree = ROOT.TTree("jets", f"jets (R={jetR})")
-            self.pair_tree = ROOT.TTree("pairs", f"particle pairs (R={jetR})"
-            )
+            self.pair_tree = ROOT.TTree("pairs", f"particle pairs (R={jetR})")
 
             self.add_branches(self.part_tree, self.part_branches, "part")
             self.add_branches(self.jet_tree, self.jet_branches, "jet")
@@ -377,7 +289,7 @@ class Generator_Tree_Data_ENC(process_data_base.ProcessDataBase):
 ##################################################################
 if __name__ == "__main__":
     # Define arguments
-    parser = argparse.ArgumentParser(description="Process MC for ENC trees.")
+    parser = argparse.ArgumentParser(description="Process data for ENC trees.")
     parser.add_argument(
         "-i",
         "--input-file",
