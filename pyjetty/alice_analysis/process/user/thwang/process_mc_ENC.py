@@ -127,7 +127,6 @@ class ProcessMC_ENC(process_mc_base.ProcessMCBase):
 		x_bin = np.searchsorted(self.eff_logRL_edges, np.log10(RL), side='left') - 1
 		y_bin = np.searchsorted(self.eff_qpt_edges, dp, side='left') - 1
 		
-		# Check if point is within bounds
 		if (0 <= x_bin < eff.shape[0] and 
 			0 <= y_bin < eff.shape[1]):
 			return eff[x_bin, y_bin]
@@ -139,14 +138,18 @@ class ProcessMC_ENC(process_mc_base.ProcessMCBase):
 		x_bin = np.searchsorted(self.eff_kt_edges, kt, side='left') - 1
 		y_bin = np.searchsorted(self.eff_phist_edges, dphistar, side='left') - 1
 		z_bin = np.searchsorted(self.eff_deta_edges, deta, side='left') - 1
-		
-		# Check if point is within bounds
-		if (0 <= x_bin < eff.shape[0] and 
-			0 <= y_bin < eff.shape[1] and
-			0 <= z_bin < eff.shape[2]):
+		if x_bin < 0:
+			x_bin = 0
+		elif x_bin >= eff.shape[0]:
+			x_bin = eff.shape[0] - 1
+		if 0 <= y_bin < eff.shape[1] and 0 <= z_bin < eff.shape[2]:
 			return eff[x_bin, y_bin, z_bin]
 		else:
 			return 1
+		# if (0 <= x_bin < eff.shape[0] and 0 <= y_bin < eff.shape[1] and 0 <= z_bin < eff.shape[2]):
+		# 	return eff[x_bin, y_bin, z_bin]
+		# else:
+		# 	return 1
 
 	#---------------------------------------------------------------
 	# Calculate pair distance of two fastjet particles
@@ -182,7 +185,7 @@ class ProcessMC_ENC(process_mc_base.ProcessMCBase):
 		delta_phi = self.Phi_mpi_pi(phi1-phi2)
 		# if (delta_phi<-0.5*M_PI) delta_phi += 2*M_PI; // This should not be needed
 
-		if (delta_phi>np.pi or delta_phi<-np.pi):
+		if (delta_phi>np.pi or delta_phi < -np.pi):
 			self.warning("Delta phi not inside desired range")
 
 		return delta_phi
@@ -215,8 +218,8 @@ class ProcessMC_ENC(process_mc_base.ProcessMCBase):
 					self.pair_type_labels = ['_qpt', '_phet']
 				else:
 					self.pair_type_labels = ['']
-				if self.do_rho_subtraction or self.do_constituent_subtraction:
-					self.pair_type_labels = ['_bb','_sb','_ss']
+				# if self.do_rho_subtraction or self.do_constituent_subtraction:
+				# 	self.pair_type_labels = ['_bb','_sb','_ss']
 
 				# Init ENC histograms (both det and truth level)
 				for pair_type_label in self.pair_type_labels:

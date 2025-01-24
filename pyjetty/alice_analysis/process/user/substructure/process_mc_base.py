@@ -312,6 +312,14 @@ class ProcessMCBase(process_base.ProcessBase):
         logger.info(f'Merged columns:\n{self.df_fjparticles.columns}')
         logger.info(f'Merged output:\n{self.df_fjparticles}')
         logger.info('--- {} seconds ---'.format(time.time() - self.start_time))
+        
+        if self.do_rho_subtraction:
+            self.jet_def_medsub = {jetR: fj.JetDefinition(fj.kt_algorithm, jetR) for jetR in self.jetR_list}
+            # NOTE: may also not need separate truth subtractor
+            self.jet_selector_medsub = {jetR: fj.SelectorAbsEtaMax(0.9 - jetR) & (~fj.SelectorNHardest(2)) & (~fj.SelectorIsPureGhost()) for jetR in self.jetR_list}
+            self.median_subtractor = {jetR: fj.JetMedianBackgroundEstimator(self.jet_selector_medsub[jetR], self.jet_def_medsub[jetR], fj.AreaDefinition(fj.active_area_explicit_ghosts)) for jetR in self.jetR_list}
+            self.median_subtractor_truth = {jetR: fj.JetMedianBackgroundEstimator(self.jet_selector_medsub[jetR], self.jet_def_medsub[jetR], fj.AreaDefinition(fj.active_area_explicit_ghosts)) for jetR in self.jetR_list}
+            self.Cjet_selectors = {jetR: fj.SelectorAbsEtaMax(0.9 - jetR) & (~fj.SelectorIsPureGhost()) for jetR in self.jetR_list}
 
         # ------------------------------------------------------------------------
         
@@ -694,14 +702,13 @@ class ProcessMCBase(process_base.ProcessBase):
                 print([p.pt() for p in fj_particles_det])
                 print([p.user_index() for p in fj_particles_combined_beforeCS])
                 print([p.pt() for p in fj_particles_combined_beforeCS])
-                    
+
         if self.dry_run:
             return
 
         # Loop through jetR, and process event for each R
         # st = time.perf_counter()
         for jetR in self.jetR_list:
-        
             # Keep track of whether to fill R-independent histograms
             self.fill_R_indep_hists = (jetR == self.jetR_list[0])
 
@@ -717,6 +724,7 @@ class ProcessMCBase(process_base.ProcessBase):
             
             # Analyze
             if self.is_pp:
+                
                 # Find pp det and truth jets
                 if self.ENC_fastsim:
                     # FIX ME: should treat long lived charged particle differently (check how the existing fast herwig and pythia handles it)
@@ -726,9 +734,9 @@ class ProcessMCBase(process_base.ProcessBase):
                         # print(part.python_info())
                         # if part.python_info()!=0:
                             fj_particles_det_ch.append(part)
-                    cs_det = fj.ClusterSequence(fj_particles_det_ch, jet_def)
+                    cs_det = fj.ClusterSequenceArea(fj_particles_det_ch, jet_def, fj.AreaDefinition(fj.VoronoiAreaSpec()))
                 else:
-                    cs_det = fj.ClusterSequence(fj_particles_det, jet_def)
+                    cs_det = fj.ClusterSequenceArea(fj_particles_det, jet_def, fj.AreaDefinition(fj.VoronoiAreaSpec()))
                 
                 jets_det_pp = fj.sorted_by_pt(cs_det.inclusive_jets())
                 # make sure the user info (on the jet side) for jets are all empty right after the jet-clustering 
@@ -744,9 +752,9 @@ class ProcessMCBase(process_base.ProcessBase):
                         if part.python_info().charge!=0: # only use charged particles #HACK: using the next line instead
                         # if part.python_info()!=0:
                             fj_particles_truth_ch.append(part)
-                    cs_truth = fj.ClusterSequence(fj_particles_truth_ch, jet_def)
+                    cs_truth = fj.ClusterSequenceArea(fj_particles_truth_ch, jet_def, fj.AreaDefinition(fj.VoronoiAreaSpec()))
                 else:
-                    cs_truth = fj.ClusterSequence(fj_particles_truth, jet_def)
+                    cs_truth = fj.ClusterSequenceArea(fj_particles_truth, jet_def, fj.AreaDefinition(fj.VoronoiAreaSpec()))
 
                 jets_truth = fj.sorted_by_pt(cs_truth.inclusive_jets())
                 # make sure the user info (on the jet side) for jets are all empty right after the jet-clustering  
@@ -755,8 +763,37 @@ class ProcessMCBase(process_base.ProcessBase):
                     jet.python_info().clear_jet_info()
                 jets_truth_selected = jet_selector_det(jets_truth)
                 jets_truth_selected_matched = jet_selector_truth_matched(jets_truth)
-            
-                self.analyze_jets(jets_det_pp_selected, jets_truth_selected, jets_truth_selected_matched, jetR)
+                
+                if self.do_rho_subtraction:
+                    if self.ENC_fastsim:
+                        detparts = fj_particles_det_ch
+                        genparts = fj_particles_truth_ch
+                    else:
+                        detparts = fj_particles_det
+                        genparts = fj_particles_truth
+                    csa_medsub = fj.ClusterSequenceArea(detparts, self.jet_def_medsub[jetR], fj.AreaDefinition(fj.active_area_explicit_ghosts))
+                    self.median_subtractor[jetR].set_cluster_sequence(csa_medsub)
+                    rho = self.median_subtractor[jetR].rho()
+
+                    Cjet_selector = self.Cjet_selectors[jetR]
+                    medsub_selected_jets = Cjet_selector(csa_medsub.inclusive_jets())
+                    C_area = np.sum([jet.area() for jet in medsub_selected_jets]) / (2 * np.pi * 0.9 * 2)
+
+                    csa_medsub_truth = fj.ClusterSequenceArea(genparts, self.jet_def_medsub[jetR], fj.AreaDefinition(fj.active_area_explicit_ghosts))
+                    self.median_subtractor_truth[jetR].set_cluster_sequence(csa_medsub_truth)
+                    rho_truth = self.median_subtractor_truth[jetR].rho()
+                    medsub_selected_jets_truth = Cjet_selector(csa_medsub_truth.inclusive_jets())
+                    C_area_truth = np.sum([jet.area() for jet in medsub_selected_jets_truth]) / (2 * np.pi * 2 * 0.9)
+                else:
+                    rho = 0
+                    C_area = 0
+                    rho_truth = 0
+                    C_area_truth = 0
+
+                if self.do_rho_subtraction:
+                    self.analyze_jets(jets_det_pp_selected, jets_truth_selected, jets_truth_selected_matched, jetR, rho_bge = (C_area * rho, C_area_truth * rho_truth))
+                else:
+                    self.analyze_jets(jets_det_pp_selected, jets_truth_selected, jets_truth_selected_matched, jetR)
                 
         #     else:
         #         for i, R_max in enumerate(self.max_distance):
@@ -848,7 +885,12 @@ class ProcessMCBase(process_base.ProcessBase):
     def analyze_jets(self, jets_det_selected, jets_truth_selected, jets_truth_selected_matched, jetR,
                     jets_det_pp_selected = None, R_max = None,
                     fj_particles_det_holes = None, fj_particles_truth_holes = None, rho_bge = 0, fj_particles_det_cones = None, fj_particles_truth_cones = None):
-    
+        if isinstance(rho_bge, tuple):
+            rho_bge_det = rho_bge[0]
+            rho_bge_truth = rho_bge[1]
+        else:
+            rho_bge_det = rho_bge
+            rho_bge_truth = rho_bge
         if self.debug_level > 1:
             print('Number of det-level jets: {}'.format(len(jets_det_selected)))
         # print('analyzing a jet...')
@@ -866,14 +908,14 @@ class ProcessMCBase(process_base.ProcessBase):
                 # print("about to return")
                 # return
             
-            self.fill_det_before_matching(jet_det, jetR, R_max, rho_bge)
+            self.fill_det_before_matching(jet_det, jetR, R_max, rho_bge_det)
     
         # Fill truth-level jet histograms (before matching)
         for jet_truth in jets_truth_selected:
             # print('analyzing truth jets...')
         
             if self.is_pp or self.fill_Rmax_indep_hists:
-                self.fill_truth_before_matching(jet_truth, jetR)
+                self.fill_truth_before_matching(jet_truth, jetR, rho_bge_truth)
     
         # Loop through jets and set jet matching candidates for each jet in user_info
         if self.is_pp:
@@ -971,7 +1013,7 @@ class ProcessMCBase(process_base.ProcessBase):
     #---------------------------------------------------------------
     # Fill truth jet histograms
     #---------------------------------------------------------------
-    def fill_truth_before_matching(self, jet, jetR):
+    def fill_truth_before_matching(self, jet, jetR, rho_bge = 0):
         # jet_pt = jet.pt()
         # for constituent in jet.constituents():
         #     z = constituent.pt() / jet.pt()
@@ -979,7 +1021,7 @@ class ProcessMCBase(process_base.ProcessBase):
                     
         # Fill 2D histogram of truth (pt, obs)
         hname = 'h_{{}}_JetPt_Truth_R{}_{{}}'.format(jetR)
-        self.fill_unmatched_jet_histograms(jet, jetR, hname)
+        self.fill_unmatched_jet_histograms(jet, jetR, hname, rho_bge)
 
     #---------------------------------------------------------------
     # Fill det jet histograms
@@ -1008,9 +1050,9 @@ class ProcessMCBase(process_base.ProcessBase):
             hname = 'h_{{}}_JetPt_R{}_{{}}'.format(jetR)
             self.fill_unmatched_jet_histograms(jet, jetR, hname, rho_bge)
 
-        if self.do_rho_subtraction:
-            hname = 'h_{{}}_JetPt_R{}_{{}}'.format(jetR)
-            self.fill_unmatched_jet_histograms(jet, jetR, hname, rho_bge)
+        # if self.do_rho_subtraction:
+        #     hname = 'h_{{}}_JetPt_R{}_{{}}'.format(jetR)
+        #     self.fill_unmatched_jet_histograms(jet, jetR, hname, rho_bge)
     
     #---------------------------------------------------------------
     # This function is called once for each jet
