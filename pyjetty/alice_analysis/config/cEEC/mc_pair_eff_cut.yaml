@@ -40,14 +40,15 @@ rules:
       dphistarcut:
         - 0.003
         - 0.007
-        - 0.01
+        - 0.010
+        - 0.013
     dir:
       - [f, pT1 > ptcut && pT2 > ptcut]
     cEEC_det:
       tree: pairs_det
       dir:
         - [d, dphistar, dphi + q2*asin(0.0825/pT2) - q1*asin(0.0825/pT1)]
-        - [f, abs(deta) > detacut && abs(dphistar) > dphistarcut]
+        - [f, abs(deta) > detacut || abs(dphistar) > dphistarcut]
       E2C_T_det: 
         dir:
           - [h, 2, "det eec T;jet pt;R_{L}", pT_bins, RL_bins, pTjet, RL, weight]
