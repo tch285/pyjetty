@@ -1,0 +1,44 @@
+targets: 
+  - E2C_T
+  - E2C_P
+  - E2C_M
+  - E2C_PM
+  - jet_pt
+
+jetR: 0.4
+
+bins:
+  pT_bins: ['c', [5, 10, 20, 40, 60, 80, 100, 150]]
+  RL_bins: ['log', 1.0e-3, 1, 30]
+  ew_bins: ['log', 1.0e-5, 1, 20]
+
+rules:
+  cEEC:
+    params:
+      ptcut:
+        - 1.0
+    dir:
+      - [f, pT1 > ptcut && pT2 > ptcut]
+    cEEC:
+      tree: pairs
+      E2C_T:
+        dir:
+          - [h, 3, "eec T;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjet]
+      E2C_P:
+        dir:
+          - [f, q1 > 0 && q2 > 0]
+          - [h, 3, "eec P;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjet]
+      E2C_M:
+        dir:
+          - [f, q1 < 0 && q2 < 0]
+          - [h, 3, "eec M;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjet]
+      E2C_PM:
+        dir:
+          - [f, (q1 * q2) < 0]
+          - [h, 3, "eec PM;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjet]
+  jetpt:
+    det:
+      tree: jets
+      jet_pt:
+        dir:
+          - [h, 1, det jet pt;jet pt;cts, pT_bins, pT]

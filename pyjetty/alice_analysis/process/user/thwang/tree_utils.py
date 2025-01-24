@@ -16,9 +16,24 @@ logger = logging.getLogger(__name__)
 handler = logging.StreamHandler()
 handler.setLevel(logging.INFO)
 
-# Create a formatter and set it for the handler
-formatter = logging.Formatter('%(asctime)s - %(filename)s:%(lineno)d - %(levelname)s - %(funcName)s - %(message)s')
-handler.setFormatter(formatter)
+class ColoredFormatter(logging.Formatter):
+    COLORS = {
+        'WARNING': '\033[33m',
+        'ERROR': '\033[31m',
+        'DEBUG': '\033[34m',
+        'INFO': '\033[32m',
+        'CRITICAL': '\033[35m'
+    }
+    RESET = '\033[0m'
+
+    def format(self, record):
+        color = self.COLORS.get(record.levelname, '')
+        if color:
+            formatted_msg = super().format(record)
+            return f"{color}{formatted_msg}{self.RESET}"
+        return super().format(record)
+
+handler.setFormatter(ColoredFormatter('%(asctime)s - %(filename)s:%(lineno)d - %(levelname)s - %(funcName)s - %(message)s'))
 
 def linbins(xmin, xmax, nbins):
     return np.linspace(xmin, xmax, nbins+1)
@@ -110,7 +125,6 @@ def find_relevant_parameters(params, recipe):
                 relparams[relparam] = True
     return {param: vals for param, vals in params.items() if relparams[param]}
 
-# find source tree
 def find_source_tree(config, keypath):
     for subdict in search_backwards(config, keypath):
         if 'tree' in subdict.keys():
@@ -123,7 +137,6 @@ def parse_directives(relparams, recipe):
     for vals in itertools.product(*relparams.values()):
         reference = {name: val for name, val in zip(names, vals)}
         name = '_'.join([f'{name}_{val}' for name, val in reference.items()])
-        # print(reference)
         # given the reference dict, replace all instances of each param with its value
         parsed_recipe = [] # list of directives, with vars replaced
         for directive in recipe:
@@ -137,32 +150,18 @@ def parse_directives(relparams, recipe):
     return parsed_directives
 
 def calc_bins(params):
-    bintype, binmin, binmax, nbins = params
+    bintype, *remargs = params
     if bintype in ['log', 'lg']:
+        binmin, binmax, nbins = remargs
         return logbins(binmin, binmax, nbins)
     elif bintype in ['lin', 'ln']:
+        binmin, binmax, nbins = remargs
         return linbins(binmin, binmax, nbins)
+    elif bintype in ['custom', 'cst', 'c']:
+        return np.array(remargs[0], dtype = float)
     else:
         raise InvalidTargetError(f"Binning type {bintype} invalid.")
 
 class InvalidTargetError(Exception):
     def __init__(self, msg):
         self.msg = msg
-
-class ColoredFormatter(logging.Formatter):
-    COLORS = {
-        'WARNING': '\033[33m',
-        'ERROR': '\033[31m',
-        'DEBUG': '\033[34m',
-        'INFO': '\033[32m',
-        'CRITICAL': '\033[35m'
-    }
-    RESET = '\033[0m'
-
-    def format(self, record):
-        color = self.COLORS.get(record.levelname, '')
-        if color:
-            # Color the entire line
-            formatted_msg = super().format(record)
-            return f"{color}{formatted_msg}{self.RESET}"
-        return super().format(record)

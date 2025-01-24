@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 """
-Analysis class to read an intermediary ROOT TTree of MC information
-and produce analysis objects via RDataFrame.
+Analysis class to read an intermediary ROOT TTree of particle
+information from data and produce analysis objects via RDataFrame.
 
 Author: Tucker Hwang (tucker_hwang@berkeley.edu)
 """
@@ -14,9 +14,6 @@ import logging
 import os
 import sys
 
-# from array import array
-# Fastjet via python (from external library heppy)
-# Data analysis and plotting
 import numpy as np
 import ROOT
 import yaml
@@ -28,18 +25,6 @@ logger = logging.getLogger(__name__)
 
 ROOT.TH1.SetDefaultSumw2()
 ROOT.TH2.SetDefaultSumw2()
-
-# def linbins(xmin, xmax, nbins):
-#     lspace = np.linspace(xmin, xmax, nbins+1)
-#     return lspace
-#     # arr = array.array('f', lspace)
-#     # return arr
-
-# def logbins(xmin, xmax, nbins):
-#     lspace = np.logspace(np.log10(xmin), np.log10(xmax), nbins+1)
-#     return lspace
-#     # arr = array.array('f', lspace)
-#     # return arr
 
 ################################################################
 class ProcessData_ENCTree:
@@ -53,19 +38,14 @@ class ProcessData_ENCTree:
         output_dir,
         output_filename = None,
     ):
-        # Initialize base class
         self.input_file = input_file
         self.config_file = config_file
         self.output_dir = output_dir
         self.output_filename =  output_filename if output_filename is not None else "AnalysisResults.root"
-        
-        # Create output dir
-        # if not self.output_dir.endswith("/"):
-        #     self.output_dir = self.output_dir + "/"
+
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
-        
-        # Create output file
+
         self.output_filepath = os.path.join(self.output_dir, self.output_filename)
 
         with open(self.config_file, "r") as stream:
@@ -75,85 +55,6 @@ class ProcessData_ENCTree:
         self.jetR = config['jetR']
         self.bin_info = config['bins']
         self.rules = config['rules']
-
-        # if self.ENC_fastsim:
-        # 	self.pair_eff_file = self.pair_eff_file
-        # 	self.dp_edges = np.array(self.dp_bins) # yedges
-        # 	self.pair_effs = {}
-        # 	for ptype in ["P", "M", "PM"]:
-        # 		self.pair_effs[ptype] = self.get_efficiency_array(self.pair_eff_file, f"h_pair_eff_{ptype}_0miss")
-        # 	self.scale_effs()
-
-    def scale_effs(self):
-        for ptype in ["P", "M", "PM"]:
-            eff = self.pair_effs[ptype]
-            for ybin in range(self.dp_nbins):
-                eff_slice = eff[:, ybin]
-                slice_max = eff_slice.max()
-                eff[:, ybin] *= 1 / slice_max
-            logger.info(ptype)
-            for ybin in range(self.dp_nbins):
-                logger.info(ybin)
-                print(eff[:, ybin])
-
-    def get_efficiency_array(self, file_path, efficiency_name):
-        """
-        Extract efficiency values into a 2D numpy array
-
-        Parameters:
-        -----------
-        file_path : str
-            Path to ROOT file
-        efficiency_name : str
-            Name of TEfficiency object in file
-
-        Returns:
-        --------
-        tuple : (eff_array, x_edges, y_edges)
-            2D numpy array of efficiency values and bin edges
-        """
-        with ROOT.TFile.Open(file_path, "read") as f:
-            eff = f.Get(efficiency_name)
-            total_hist = eff.GetTotalHistogram()
-
-            nx = total_hist.GetNbinsX()
-            ny = total_hist.GetNbinsY()
-
-            # Create 2D numpy array to store efficiencies
-            eff_array = np.zeros((nx, ny))
-
-            # Fill the array with efficiency values
-            for ix in range(1, nx + 1):
-                for iy in range(1, ny + 1):
-                    global_bin = eff.GetGlobalBin(ix, iy)
-                    eff_array[ix - 1, iy - 1] = eff.GetEfficiency(global_bin)
-
-            # Get bin edges
-            # x_edges = np.array([total_hist.GetXaxis().GetBinLowEdge(i)
-            # 				for i in range(1, nx + 2)])
-            # y_edges = np.array([total_hist.GetYaxis().GetBinLowEdge(i)
-            # 				for i in range(1, ny + 2)])
-
-            # return eff_array, x_edges, y_edges
-            return eff_array
-
-    def get_pair_eff(self, RL, dp, q1, q2):
-        if q1 * q2 < 0:
-            ptype = "PM"
-        elif q1 > 0 and q2 > 0:
-            ptype = "P"
-        else:
-            ptype = "M"
-        eff = self.pair_effs[ptype]
-
-        x_bin = np.searchsorted(self.logRL_bins, np.log10(RL), side="left") - 1
-        y_bin = np.searchsorted(self.dp_bins, dp, side="left") - 1
-
-        # Check if point is within bounds
-        if 0 <= x_bin < eff.shape[0] and 0 <= y_bin < eff.shape[1]:
-            return eff[x_bin, y_bin]
-        else:
-            return 1
 
     # ---------------------------------------------------------------
     # Calculate phistar distance of two fastjet particles
@@ -184,8 +85,7 @@ class ProcessData_ENCTree:
             + 2 * p1.pt() * p2.pt() * np.cos(p1.phi() - p2.phi())
         )
 
-    def note_time(self):
-        return f"---------- {perf_counter() - self.start_time:.3f} sec. ----------"
+    def note_time(self, msg): logger.info(f"{msg}: ---------- {perf_counter() - self.start_time:.3f} sec. ----------")
 
     def process_data_trees(self):
         self.start_time = perf_counter()
@@ -197,7 +97,7 @@ class ProcessData_ENCTree:
         self.set_rules()
 
         self.save_histos()
-        logger.info(f"Completed analysis: {self.note_time()}")
+        self.note_time("Completed analysis")
 
     def parse_observables(self):
         self.valid_targets = []
@@ -226,8 +126,8 @@ class ProcessData_ENCTree:
                 self.valid_targets.append(obs)
                 self.sources.add(source)
             except utils.InvalidTargetError as e:
-                logger.warning(f"Invalid target '{obs}': {e.msg}")
-        logger.info(f"Completed observable parsing: {self.note_time()}")
+                logger.warning(f"Invalid target '{obs}': {e.msg} Skipping target.")
+        self.note_time("Completed observable parsing")
 
     def initialize_trees(self):
         src2br = {'pairs':      'pairs',
@@ -254,15 +154,15 @@ class ProcessData_ENCTree:
         if 'jets' in self.sources:
             self.trees['jets'] = dfs[src2br['jets']]
 
-        logger.info(f"Completed tree initialization: {self.note_time()}")
+        self.note_time("Completed tree initialization")
     
     def setup_histo_bins(self):
         self.bins = {}
         self.nbins = {}
         for name, params in self.bin_info.items():
             self.bins[name] = utils.calc_bins(params)
-            self.nbins[name] = params[-1]
-        logger.info(f"Completed bin setup: {self.note_time()}")
+            self.nbins[name] = len(self.bins[name]) - 1
+        self.note_time("Completed bin setup")
 
     def set_rules(self):
         self.hists = {}
@@ -271,8 +171,8 @@ class ProcessData_ENCTree:
             for directive in recipe:
                 hist = self.apply_directive(histname, hist, directive)
             self.hists[histname] = hist
-        
-        logger.info(f"Completed rule setting: {self.note_time()}")
+
+        self.note_time("Completed rule setting")
 
     def apply_directive(self, histname, source, directive):
         dirclass, *args = directive
@@ -287,9 +187,14 @@ class ProcessData_ENCTree:
             elif args[0] == 2:
                 title, xbins, ybins, *remargs = args[1:]
                 return source.Histo2D((histname, title, self.nbins[xbins], self.bins[xbins], self.nbins[ybins], self.bins[ybins]), *remargs)
+            elif args[0] == 3:
+                title, xbins, ybins, zbins, *remargs = args[1:]
+                return source.Histo3D((histname, title, self.nbins[xbins], self.bins[xbins], self.nbins[ybins], self.bins[ybins], self.nbins[zbins], self.bins[zbins]), *remargs)
             else:
                 raise NotImplementedError(f"Histograms of dimension {args[0]} not implemented.")
-    
+        else:
+            raise NotImplementedError(f"Directive class '{dirclass}' not recognized.")
+
     def save_histos(self):
         with ROOT.TFile(self.input_file, "READ") as infile:
             hist_nev = infile.Get("hNevents")
@@ -301,7 +206,7 @@ class ProcessData_ENCTree:
             hist.Write()
         outfile.WriteTObject(hist_nevc)
         outfile.Close()
-        logger.info(f"Completed histogram saving: {self.note_time()}")
+        self.note_time("Completed histogram saving")
 
 
 ##################################################################
@@ -359,10 +264,7 @@ if __name__ == "__main__":
     handler = logging.StreamHandler()
 
     # Create a formatter and set it for the handler
-    formatter = logging.Formatter(
-        "%(asctime)s - %(filename)s:%(lineno)d - %(levelname)s - %(funcName)s - %(message)s"
-    )
-    handler.setFormatter(formatter)
+    handler.setFormatter(utils.ColoredFormatter('%(asctime)s - %(filename)s:%(lineno)d - %(levelname)s - %(funcName)s - %(message)s'))
     handler.setLevel(logging.INFO)
     logger.addHandler(handler)
     logger.setLevel(logging.DEBUG)
