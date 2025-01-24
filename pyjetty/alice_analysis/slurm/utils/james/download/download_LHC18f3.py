@@ -29,7 +29,7 @@ import queue
 import subprocess
 import sys
 import time
-import re
+import shutil
 from pathlib import Path
 
 import yaml
@@ -115,18 +115,23 @@ def download_data(config_file, log_level):
     else:
         pt_hat_bins = None
         n_pt_hat_bins = None
+    overwrite = config['overwrite']
 
     # Create output dir and cd into it
     output_end = period if parent_dir == 'sim' else f"{period}_{trigclus}"
     output_dir = os.path.join(output_dir, output_end)
+    if overwrite and os.path.isdir(output_dir):
+        shutil.rmtree(output_dir)
+        logger.info("Output directory cleared.")
+
     if not os.path.exists(output_dir):
-      os.makedirs(output_dir)
+        os.makedirs(output_dir)
     os.chdir(output_dir)
     logger.info(f'Output: {output_dir}')
 
     prog_queue = mp.Queue()
     nruns = len(runlist)
-    nloops = n_pt_hat_bins * nruns if parent_dir == 'sim' else 0
+    nloops = n_pt_hat_bins * nruns if parent_dir == 'sim' and n_pt_hat_bins else 0
     
     processes = []
     # Loop through runs, and start a download for each run in parallel
@@ -142,7 +147,7 @@ def download_data(config_file, log_level):
     total_prog_bar = tqdm(total=nloops, unit='loop', desc='Overall', position=nruns)
 
     if parent_dir == 'sim':
-        run_prog_bars = [tqdm(total=n_pt_hat_bins, unit='bin', desc=f"{i+1:02}: {run}", position=i) for i, run in enumerate(runlist)]
+        run_prog_bars = [tqdm(total=0, unit='subrun', desc=f"{i+1:>2d}: {run}", position=i) for i, run in enumerate(runlist)]
         completed_runs = 0
         while completed_runs < nruns:
             try:
@@ -199,18 +204,17 @@ def download_run(run_idx, prog_queue, parent_dir, year, period, run, train_PWG, 
         # prog_queue.put((run_idx, 1))
         
     elif parent_dir == 'sim':
-        for pt_hat_bin in pt_hat_bins:
-            logger.info(f"Bin {pt_hat_bin}: starting download.")
-            train_output_dir = f'/alice/{parent_dir}/{year}/{period}/{pt_hat_bin}/{run}/{train_PWG}/{train_name}/{train_tag}'
-            download(train_output_dir, run, pt_hat_bin, max_attempts, logger, prog_queue, run_idx)
-            logger.info(f"Bin {pt_hat_bin}: download complete.")
-            prog_queue.put((run_idx, 1))
+        train_output_dir = f'/alice/{parent_dir}/{year}/{period}/{run}/AOD202/{train_PWG}/{train_name}/{train_tag}'
+        download(train_output_dir, run, None, max_attempts, logger, prog_queue, run_idx)
+        prog_queue.put((run_idx, 1))
     
     prog_queue.put((run_idx, "DONE"))
     logger.info(f"Run {run}: download complete.")
 
 #---------------------------------------------------------------------------
 def download(train_output_dir, run, pt_hat_bin, max_attempts, logger, queue = None, run_idx = None):
+
+    
     logger.debug(f'Train output dir: {train_output_dir}')
     if pt_hat_bin:
         run_path = f'{pt_hat_bin}/{run}'
@@ -224,12 +228,13 @@ def download(train_output_dir, run, pt_hat_bin, max_attempts, logger, queue = No
         logger.error(f'alien_ls failed with code {result.returncode}')
         return
     output = result.stdout
-    all_subdirs = [line.strip().rstrip('/') for line in output.split('\n') if line.endswith('/')]
-    subruns = [subdir for subdir in all_subdirs if re.match(r'^\d+$', subdir)]
+    # all_subdirs = [line.strip().rstrip('/') for line in output.split('\n') if line.endswith('/')]
+    # subruns = [subdir for subdir in all_subdirs if subdir.startswith('00')]
+    subruns = [line.strip().rstrip('/') for line in output.split('\n') if line.endswith('/') and not line.startswith('Stage')]
     logger.info(f"Subruns: {subruns}")
 
-    # if 'data' in train_output_dir:
-    queue.put((run_idx, ("UPDATE", len(subruns))))
+    if 'sim' in train_output_dir:
+        queue.put((run_idx, ("UPDATE", len(subruns))))
 
     # Remove any empty directories
     if os.path.exists(run_path):

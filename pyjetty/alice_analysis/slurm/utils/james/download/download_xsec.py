@@ -86,99 +86,52 @@ def download_data(config_file, log_level):
     with open(config_file, 'r') as stream:
       config = yaml.safe_load(stream)
     
-    period = config['period']
-    parent_dir = config['parent_dir']
-    year = config['year']
-    train_name = config['train_name']
-    train_PWG = config['train_PWG']
-    train_tag = config['train_tag']
+    alien_dir = config['alien_dir']
     runlist = config['runlist']
+    nruns = len(runlist)
     output_dir = config['output_dir']
+    pt_hat_bins = config['pt_hat_bins']
+    n_pt_hat_bins = len(pt_hat_bins)
+    is_AOD = config['is_AOD']
     max_attempts = config['max_attempts'] if 'max_attempts' in config else 5
     
-    if 'childno' in config:
-        childno = config['childno']
-    else:
-        childno = None
-    if 'recopass' in config:
-        recopass = config['recopass']
-    else:
-        recopass = None
-    if 'trigclus' in config:
-        trigclus = config['trigclus']
-    else:
-        trigclus = None
-
-    if 'pt_hat_bins' in config:
-        pt_hat_bins = config['pt_hat_bins']
-        n_pt_hat_bins = len(pt_hat_bins)
-    else:
-        pt_hat_bins = None
-        n_pt_hat_bins = None
-
-    # Create output dir and cd into it
-    output_end = period if parent_dir == 'sim' else f"{period}_{trigclus}"
-    output_dir = os.path.join(output_dir, output_end)
     if not os.path.exists(output_dir):
-      os.makedirs(output_dir)
+        os.makedirs(output_dir)
     os.chdir(output_dir)
     logger.info(f'Output: {output_dir}')
 
     prog_queue = mp.Queue()
-    nruns = len(runlist)
-    nloops = n_pt_hat_bins * nruns if parent_dir == 'sim' else 0
+    nloops = n_pt_hat_bins * nruns
     
     processes = []
     # Loop through runs, and start a download for each run in parallel
     logger.info(f"Downloading {nruns} runs.")
     start = time.time()
     for run_idx, run in enumerate(runlist):
-        p = mp.Process(target=download_run, args=(run_idx, prog_queue, parent_dir, year,
-                                                  period, run, train_PWG, train_name, train_tag,
-                                                  pt_hat_bins, childno, recopass, trigclus, max_attempts))
+        p = mp.Process(target=download_run, args=(run_idx, prog_queue, alien_dir, run, pt_hat_bins, is_AOD, max_attempts))
         processes.append(p)
         p.start()
-    
+
     total_prog_bar = tqdm(total=nloops, unit='loop', desc='Overall', position=nruns)
 
-    if parent_dir == 'sim':
-        run_prog_bars = [tqdm(total=n_pt_hat_bins, unit='bin', desc=f"{i+1:02}: {run}", position=i) for i, run in enumerate(runlist)]
-        completed_runs = 0
-        while completed_runs < nruns:
-            try:
-                run_idx, increment = prog_queue.get(timeout=0.5)
-                if increment == "DONE":
-                    completed_runs += 1
-                    total_prog_bar.update(1)
-                elif isinstance(increment, tuple):
-                    _, nsubruns = increment
-                    run_prog_bars[run_idx].reset(total = nsubruns)
-                    total_prog_bar.total = total_prog_bar.total + nsubruns
-                    total_prog_bar.refresh()
-                else:
-                    total_prog_bar.update(increment)
-                    run_prog_bars[run_idx].update(increment)
-            except queue.Empty:
-                pass
-    elif parent_dir == 'data':
-        run_prog_bars = [tqdm(total=0, unit='subrun', desc=f"{i+1:>2d}: {run}", position=i) for i, run in enumerate(runlist)]
-        completed_runs = 0
-        while completed_runs < nruns:
-            try:
-                run_idx, increment = prog_queue.get(timeout=0.5)
-                if increment == "DONE":
-                    completed_runs += 1
-                    total_prog_bar.update(1)
-                elif isinstance(increment, tuple):
-                    _, nsubruns = increment
-                    run_prog_bars[run_idx].reset(total = nsubruns)
-                    total_prog_bar.total = total_prog_bar.total + nsubruns
-                    total_prog_bar.refresh()
-                else:
-                    total_prog_bar.update(increment)
-                    run_prog_bars[run_idx].update(increment)
-            except queue.Empty:
-                pass
+    run_prog_bars = [tqdm(total=n_pt_hat_bins, unit='bin', desc=f"{i+1:02}: {run}", position=i) for i, run in enumerate(runlist)]
+    completed_runs = 0
+    while completed_runs < nruns:
+        try:
+            run_idx, increment = prog_queue.get(timeout=0.5)
+            if increment == "DONE":
+                completed_runs += 1
+                total_prog_bar.update(1)
+            elif isinstance(increment, tuple):
+                _, nsubruns = increment
+                run_prog_bars[run_idx].reset(total = nsubruns)
+                total_prog_bar.total = total_prog_bar.total + nsubruns
+                total_prog_bar.refresh()
+            else:
+                total_prog_bar.update(increment)
+                run_prog_bars[run_idx].update(increment)
+        except queue.Empty:
+            pass
 
     for p in processes:
         p.join()
@@ -190,32 +143,26 @@ def download_data(config_file, log_level):
     logger.info(f"Download complete: {format_time_difference(time.time() - start)} elapsed.")
 
 #---------------------------------------------------------------------------
-def download_run(run_idx, prog_queue, parent_dir, year, period, run, train_PWG, train_name, train_tag, pt_hat_bins, childno, recopass, trigclus, max_attempts):
+def download_run(run_idx, prog_queue, alien_dir, run, pt_hat_bins, is_AOD, max_attempts):
     logger = setup_process_logger(run_idx, run)
     logger.info(f"Run {run}: starting download.")
-    if parent_dir == 'data':
-        train_output_dir = f'/alice/{parent_dir}/{year}/{period}/{run:09d}/pass{recopass}_{trigclus}/{train_PWG}/{train_name}/{train_tag}_child_{childno}'
-        download(train_output_dir, run, None, max_attempts, logger, prog_queue, run_idx)
-        # prog_queue.put((run_idx, 1))
-        
-    elif parent_dir == 'sim':
-        for pt_hat_bin in pt_hat_bins:
-            logger.info(f"Bin {pt_hat_bin}: starting download.")
-            train_output_dir = f'/alice/{parent_dir}/{year}/{period}/{pt_hat_bin}/{run}/{train_PWG}/{train_name}/{train_tag}'
-            download(train_output_dir, run, pt_hat_bin, max_attempts, logger, prog_queue, run_idx)
-            logger.info(f"Bin {pt_hat_bin}: download complete.")
-            prog_queue.put((run_idx, 1))
-    
+
+    for pt_hat_bin in pt_hat_bins:
+        logger.info(f"Bin {pt_hat_bin}: starting download.")
+        train_output_dir = f'{alien_dir}/{pt_hat_bin}/{run}'
+        if is_AOD:
+            train_output_dir += '/AOD'
+        download(train_output_dir, run, pt_hat_bin, max_attempts, logger, prog_queue, run_idx)
+        logger.info(f"Bin {pt_hat_bin}: download complete.")
+        prog_queue.put((run_idx, 1))
+
     prog_queue.put((run_idx, "DONE"))
     logger.info(f"Run {run}: download complete.")
 
 #---------------------------------------------------------------------------
-def download(train_output_dir, run, pt_hat_bin, max_attempts, logger, queue = None, run_idx = None):
+def download(train_output_dir, run, pt_hat_bin, max_attempts, logger, queue, run_idx):
     logger.debug(f'Train output dir: {train_output_dir}')
-    if pt_hat_bin:
-        run_path = f'{pt_hat_bin}/{run}'
-    else:
-        run_path = run
+    run_path = f'{pt_hat_bin}/{run}'
 
     # Construct list of subdirectories (i.e. list of files to download)
     cmd = f'alien_ls {train_output_dir}'
@@ -225,7 +172,7 @@ def download(train_output_dir, run, pt_hat_bin, max_attempts, logger, queue = No
         return
     output = result.stdout
     all_subdirs = [line.strip().rstrip('/') for line in output.split('\n') if line.endswith('/')]
-    subruns = [subdir for subdir in all_subdirs if re.match(r'^\d+$', subdir)]
+    subruns = [subdir for subdir in all_subdirs if re.match(r"^\d+$", subdir)]
     logger.info(f"Subruns: {subruns}")
 
     # if 'data' in train_output_dir:
@@ -246,25 +193,71 @@ def download(train_output_dir, run, pt_hat_bin, max_attempts, logger, queue = No
             queue.put((run_idx, 1))
             continue
         
+        # find the stat file
         for i in range(max_attempts):
-            cmd = f'alien_cp -f alien:{train_output_dir}/{subrun}/AnalysisResults.root file:{subrun_path}' # modified: file: prefix needed
-            logger.info(f"Copy: {cmd}")
+            cmd = f'alien_ls {train_output_dir}/{subrun}'
             try:
-                result = subprocess.run(cmd, check=True, encoding='utf-8', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                for line in result.stdout.splitlines():
-                    logger.info(line)
-                break
-            except subprocess.CalledProcessError as e:
-                logger.warning(f"Copy failed with return code {e.returncode} on try {i+1}/{max_attempts}, reattempting...")
-                if os.path.isfile(f"{subrun_path}/AnalysisResults.root"):
-                    os.remove(f"{subrun_path}/AnalysisResults.root")
-                    logger.info("File removed.")
+                result = subprocess.run(cmd, shell = True, encoding='utf-8', stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                output = result.stdout
+                all_files = [filename.strip() for filename in output.splitlines()]
+                if not all_files:
+                    statfile = ""
+                    break
                 else:
-                    logger.info("File not found, no removal.")
+                    statfile_matches = [filename for filename in all_files if re.match(r'^\d+_\d+_\d+_\d+\.stat$', filename)]
+                    xsecfile_matches = [filename for filename in all_files if filename == "pyxsec_hists.root"]
+                    if len(statfile_matches) == 1 and len(xsecfile_matches) == 1:
+                        statfile = statfile_matches[0]
+                    elif len(statfile_matches) == 0 and len(xsecfile_matches) == 0:
+                        logger.warning(f"Could not find either file for subrun {subrun}, directory contains {all_files}")
+                        statfile = ""
+                    elif len(statfile_matches) == 1 and len(xsecfile_matches) == 0:
+                        if statfile_matches[0] == "0_0_0_0.stat":
+                            logger.warning(f"Missing xsec but zero statfile. {subrun}, directory contains {all_files}")
+                            statfile = ""
+                        else:
+                            logger.error(f"Missing xsec but nonzero statfile in {subrun}: {all_files}")
+                            raise ValueError(f"Missing xsec but nonzero statfile in {subrun}: {all_files}")
+                    else:
+                        logger.error(f"Missing statfile but xsecfile exists in {subrun}: {all_files}")
+                        raise ValueError(f"Missing statfile but xsecfile exists in {subrun}: {all_files}")
+                    break
+            except subprocess.CalledProcessError as e:
+                logger.warning(f'Statfile finding with alien_ls failed with code {e.returncode} on try {i+1}/{max_attempts}, reattempting...')
         else:
-            logger.error(f"Copy failed {max_attempts} times: {cmd}")
+            logger.error(f"Statfile finding failed {max_attempts} times: {cmd}")
+
+        if statfile:
+            files_to_copy = []
+            if not os.path.isfile(f'{subrun_path}/{statfile}'):
+                files_to_copy.append(statfile)
+            else:
+                logger.info(f"Found statfile in {subrun_path}/{statfile}, skipping.")
+            if not os.path.isfile(f'{subrun_path}/pyxsec_hists.root'):
+                files_to_copy.append("pyxsec_hists.root")
+            else:
+                logger.info(f"Found xsec in {subrun_path}/pyxsec_hists.root, skipping.")
+
+            for filename in files_to_copy:
+                for i in range(max_attempts):
+                    cmd = f'alien_cp -f alien:{train_output_dir}/{subrun}/{filename} file:{subrun_path}' # modified: file: prefix needed
+                    logger.info(f"Copy: {cmd}")
+                    try:
+                        result = subprocess.run(cmd, check=True, encoding='utf-8', shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                        for line in result.stdout.splitlines():
+                            logger.info(line)
+                        break
+                    except subprocess.CalledProcessError as e:
+                        logger.warning(f"Copy failed with return code {e.returncode} on try {i+1}/{max_attempts}, reattempting...")
+                        if os.path.isfile(f"{subrun_path}/{filename}"):
+                            os.remove(f"{subrun_path}/{filename}")
+                            logger.info("File removed.")
+                        else:
+                            logger.info("File not found, no removal.")
+                else:
+                    logger.error(f"Copy failed {max_attempts} times: {cmd}")
         queue.put((run_idx, 1))
-        
+
 
 def format_time_difference(time_diff):
     hours, remainder = divmod(time_diff, 3600)

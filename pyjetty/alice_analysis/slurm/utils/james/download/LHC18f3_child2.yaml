@@ -1,0 +1,13 @@
+# Configuration to download LHC18f3 data
+# (to be used by download_LHC18f3.py)
+overwrite: True
+
+period: 'LHC18f3_cent_woSDD_2'
+parent_dir: 'sim'
+year: '2018'
+train_name: 'HF_TreeCreator'
+train_PWG: 'PWGHF'
+train_tag: '803_20240725-1512_child_2'
+runlist: [265309, 265332, 265334, 265335, 265336, 265338, 265339, 265342, 265343, 265344, 265377, 265378, 265381, 265383, 265384, 265385, 265387, 265388, 265419, 265420, 265421, 265422, 265424, 265425, 265426, 265427, 265435, 265499, 265500, 265501, 265521, 265525, 267163, 267164, 267165, 267166]
+
+output_dir: '/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/data/LHC18f3/803'

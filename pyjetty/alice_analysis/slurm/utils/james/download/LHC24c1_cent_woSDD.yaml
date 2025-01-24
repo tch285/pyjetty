@@ -1,0 +1,13 @@
+# Configuration to download LHC18b8 data
+# (to be used by download_data.py)
+
+period: 'LHC24c1_cent_woSDD'
+parent_dir: 'sim'
+year: '2024'
+train_name: 'HF_TreeCreator'
+pt_hat_bins: [1, 2, 3, 4, 5, 6]
+train_PWG: 'PWGHF'
+train_tag: '808_20241223-1834'
+runlist: [265309, 265332, 265334, 265335, 265336, 265338, 265339, 265342, 265343, 265344, 265377, 265378, 265381, 265383, 265384, 265385, 265387, 265388, 265419, 265420, 265421, 265422, 265424, 265425, 265426, 265427, 265435, 265499, 265500, 265501, 265521, 265525, 267163, 267164, 267165, 267166]
+
+output_dir: '/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/data/LHC24c1/808_809'
