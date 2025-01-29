@@ -1,14 +1,13 @@
-#!/usr/bin/env python
-
-from __future__ import print_function
+#!/usr/bin/env python3
 
 import os
 import argparse
-
+import sys
 import pyhepmc_ng
 
 import hepmc2antuple_base
-
+import faulthandler
+faulthandler.enable()
 # jit improves execution time by 18% - tested with jetty pythia8 events
 # BUT produces invalid root file
 # from numba import jit
@@ -28,28 +27,47 @@ class HepMC2antuple(hepmc2antuple_base.HepMC2antupleBase):
   #---------------------------------------------------------------
   def main(self):
   
-    if self.hepmc == 3:
-      input_hepmc = pyhepmc_ng.ReaderAscii(self.input)
-    if self.hepmc == 2:
-      input_hepmc = pyhepmc_ng.ReaderAsciiHepMC2(self.input)
+    # if self.hepmc == 3:
+    #   input_hepmc = pyhepmc_ng.ReaderAscii(self.input)
+    # if self.hepmc == 2:
+    #   input_hepmc = pyhepmc_ng.ReaderAsciiHepMC2(self.input)
 
-    if input_hepmc.failed():
-      print ("[error] unable to read from {}".format(self.input))
-      sys.exit(1)
+    # if input_hepmc.failed():
+    #   print ("[error] unable to read from {}".format(self.input))
+    #   sys.exit(1)
 
-    event_hepmc = pyhepmc_ng.GenEvent()
+    # event_hepmc = pyhepmc_ng.GenEvent()
 
-    while not input_hepmc.failed():
-      ev = input_hepmc.read_event(event_hepmc)
-      if input_hepmc.failed():
-        break
+    # while not input_hepmc.failed():
+    #   ev = input_hepmc.read_event(event_hepmc)
+    #   if input_hepmc.failed():
+    #     break
 
-      self.fill_event(event_hepmc)
-      self.increment_event()
-      if self.nev > 0 and self.ev_id > self.nev:
-        break
+    #   self.fill_event(event_hepmc)
+    #   self.increment_event()
+    #   if self.nev > 0 and self.ev_id > self.nev:
+    #     break
+    with pyhepmc_ng.open(self.input) as f:
+      while self.nev < 0 or self.ev_id < self.nev:
+        event = f.read()
+        self.fill_event(event)
+        self.increment_event()
+      # for event in f:
+      # while not input_hepmc.failed():
+        # ev = input_hepmc.read_event(event_hepmc)
+        # if input_hepmc.failed():
+        #   break
+
+        # self.fill_event(event_hepmc)
+        # self.fill_event(event)
+        # self.increment_event()
+        # if self.nev > 0 and self.ev_id > self.nev:
+          # break
       
     self.finish()
+    print('attempting exit')
+    # input_hepmc.__exit__()
+    print('finished finish')
 
   #---------------------------------------------------------------
   def fill_event(self, event_hepmc):
@@ -71,7 +89,6 @@ class HepMC2antuple(hepmc2antuple_base.HepMC2antupleBase):
         
 #---------------------------------------------------------------
 if __name__ == '__main__':
-  
   parser = argparse.ArgumentParser(description='hepmc to ALICE Ntuple format', prog=os.path.basename(__file__))
   parser.add_argument('-i', '--input', help='input file', default='', type=str, required=True)
   parser.add_argument('-o', '--output', help='output root file', default='', type=str, required=True)
@@ -85,3 +102,4 @@ if __name__ == '__main__':
   
   converter = HepMC2antuple(input = args.input, output = args.output, as_data = args.as_data, hepmc = args.hepmc, nev = args.nev, gen = args.gen, no_progress_bar = args.no_progress_bar, include_parton = args.include_parton)
   converter.main()
+  print('end here')

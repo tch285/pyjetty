@@ -84,7 +84,16 @@ def accept_particle_hybrid(part, pdg, parton):
     raise NotImplementedError('Parton tree not implemented yet for hybrid') 
   
   return accept_particle_status(part, status, end_vertex, pid, pdg, status_accepted = [1, 6, 7])
+
+#---------------------------------------------------------------
+def accept_particle_sherpa(part, status, end_vertex, pid, pdg, parton=False):
   
+  if parton:
+    raise NotImplementedError('Parton tree not implemented yet for Sherpa')
+
+  # is this right?
+  return accept_particle_status(part, status, end_vertex, pid, pdg, status_accepted = [1])
+
 #---------------------------------------------------------------
 def accept_particle_status(part, status, end_vertex, pid, pdg, parton=False, status_accepted = [1], select_charged=True, charged_exception=[], pt_exception=0.):
   
@@ -106,7 +115,7 @@ def accept_particle_status(part, status, end_vertex, pid, pdg, parton=False, sta
       #  print(part, status)
       #  print('pid: {} = {}'.format(part.pid, pdg.GetParticle(part.pid).GetName()))
       if not parton and pdg.GetParticle(pid).Charge() == 0:
-        if status not in charged_exception and part.momentum().perp() > pt_exception: # Exceptions for JEWEL in order to keep recoils and dummies
+        if status not in charged_exception and part.momentum.perp() > pt_exception: # Exceptions for JEWEL in order to keep recoils and dummies
           return False
     else:
       return False

@@ -1,16 +1,14 @@
-#!/usr/bin/env python
-
-from __future__ import print_function
+#!/usr/bin/env python3
 
 import os
 import tqdm
-
-import ROOT
-ROOT.gROOT.SetBatch(True)
-
+import sys
 import select_particles
+import ROOT
 
 from pyjetty.alice_analysis.process.base import common_base
+
+ROOT.gROOT.SetBatch(True)
 
 ################################################################
 class HepMC2antupleBase(common_base.CommonBase):
@@ -82,6 +80,8 @@ class HepMC2antupleBase(common_base.CommonBase):
       return select_particles.accept_particle_martini(part, status, end_vertex, pid, pdg, parton)
     elif gen == 'hybrid':
       return select_particles.accept_particle_hybrid(part, status, end_vertex, pid, pdg, parton)
+    elif gen == 'sherpa':
+      return select_particles.accept_particle_sherpa(part, status, end_vertex, pid, pdg, parton)
 
     sys.exit('Generator type unknown: {}'.format(gen))
 
@@ -99,8 +99,22 @@ class HepMC2antupleBase(common_base.CommonBase):
   def finish(self):
   
     self.print_particles()
+    print('finished print')
+    # self.outf = ROOT.TFile(self.output, 'recreate')
+    # self.outf.cd()
+    # with ROOT.TFile(self.output, 'recreate') as file:
+    #   tdf = ROOT.TDirectoryFile('PWGHF_TreeCreator', 'PWGHF_TreeCreator')
+    #   tdf.cd()
+    #   file.WriteTObject(self.t_e)
+    #   file.WriteTObject(self.t_p)
     self.outf.Write()
+    print('finished write')
     self.outf.Close()
+    print('finished close')
+    ROOT.gROOT.CloseFiles()
+    ROOT.gROOT.Reset()
+    # ROOT.gDirectory.Clear()
+    print('finished clean')
   
   #---------------------------------------------------------------
   def print_particles(self):
