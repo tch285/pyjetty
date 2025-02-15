@@ -714,8 +714,8 @@ class ProcessMCBase(process_base.ProcessBase):
 
             # Set jet definition and a jet selector
             jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
-            jet_selector_det = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9 - jetR)
-            jet_selector_truth_matched = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9)
+            jet_selector_det = fj.SelectorPtMin(5.0) & fj.SelectorAbsEtaMax(0.9 - jetR)
+            jet_selector_truth_matched = fj.SelectorPtMin(5.0) & fj.SelectorAbsEtaMax(0.9)
             if self.debug_level > 2:
                 print('')
                 print('jet definition is:', jet_def)
@@ -730,9 +730,7 @@ class ProcessMCBase(process_base.ProcessBase):
                     # FIX ME: should treat long lived charged particle differently (check how the existing fast herwig and pythia handles it)
                     fj_particles_det_ch = fj.vectorPJ()
                     for part in fj_particles_det:
-                        if part.python_info().charge!=0: # only use charged particles HACK: commented out line, using the one after it
-                        # print(part.python_info())
-                        # if part.python_info()!=0:
+                        if part.python_info().charge!=0 and part.pt() > 0.0001: # only use charged particles # HACK: Voronoi area fails for very soft particles
                             fj_particles_det_ch.append(part)
                     cs_det = fj.ClusterSequenceArea(fj_particles_det_ch, jet_def, fj.AreaDefinition(fj.VoronoiAreaSpec()))
                 else:
@@ -749,8 +747,7 @@ class ProcessMCBase(process_base.ProcessBase):
                     # FIXME: should treat long lived charged particle differently (check how the existing fast herwig and pythia handles it)
                     fj_particles_truth_ch = fj.vectorPJ()
                     for part in fj_particles_truth:
-                        if part.python_info().charge!=0: # only use charged particles #HACK: using the next line instead
-                        # if part.python_info()!=0:
+                        if part.python_info().charge!=0 and part.pt() > 0.0001: # only use charged particles # HACK: Voronoi area fails for very soft particles
                             fj_particles_truth_ch.append(part)
                     cs_truth = fj.ClusterSequenceArea(fj_particles_truth_ch, jet_def, fj.AreaDefinition(fj.VoronoiAreaSpec()))
                 else:
@@ -758,7 +755,7 @@ class ProcessMCBase(process_base.ProcessBase):
 
                 jets_truth = fj.sorted_by_pt(cs_truth.inclusive_jets())
                 # make sure the user info (on the jet side) for jets are all empty right after the jet-clustering  
-                for jet in jets_truth: #HACK: not sure this is unnecessary, bt removing it...
+                for jet in jets_truth: # HACK: not sure this is unnecessary, bt removing it...
                   if jet.has_user_info():
                     jet.python_info().clear_jet_info()
                 jets_truth_selected = jet_selector_det(jets_truth)
