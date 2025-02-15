@@ -75,8 +75,8 @@ class ProcessData_ENC(process_data_base_pPb.ProcessDataBase):
         with open(self.config_file, 'r') as stream:
             config = yaml.safe_load(stream)
         self.do_bsub_hists = config['do_bsub_hists'] if 'do_bsub_hists' in config else False
-        self.charge_types = ["PP", "MM", "PM"]
-        self.charge_types_ext = ["PP", "MM", "PM", "T", "Q"]
+        self.charge_types = ["P", "M", "PM"]
+        self.charge_types_ext = ["P", "M", "PM", "T", "Q"]
 
     #---------------------------------------------------------------
     # Initialize histograms
@@ -123,6 +123,8 @@ class ProcessData_ENC(process_data_base_pPb.ProcessDataBase):
                         self.pair_type_labels = ['']
                         if self.do_perpendicular_cone:
                             self.pair_type_labels = ['_jj','_jp','_pp']
+                            if self.mixed_cone:
+                                self.pair_type_labels.append("_mx")
 
                         if 'ENC' in observable:
                             for pair_type_label in self.pair_type_labels:
@@ -233,6 +235,23 @@ class ProcessData_ENC(process_data_base_pPb.ProcessDataBase):
                         getattr(self, hname.format(observable+charge_type+pair_type, jetR, obs_label)).Fill(jet_pt_subtracted, RL, weight)
                         getattr(self, hname.format(observable+"_T"+pair_type, jetR, obs_label)).Fill(jet_pt_subtracted, RL, weight)
                         getattr(self, hname.format(observable+"_Q"+pair_type, jetR, obs_label)).Fill(jet_pt_subtracted, RL, q1*q2*weight)
+                if self.mixed_cone:
+                    cone1_w_ptcut = [p for p in jet.python_info().perpcone1 if p.pt() > trk_thrd]
+                    cone2_w_ptcut = [p for p in jet.python_info().perpcone2 if p.pt() > trk_thrd]
+                    for p1 in cone1_w_ptcut:
+                        for p2 in cone2_w_ptcut:
+                            pair_weight = p1.pt() * p2.pt() / (jet_pt_subtracted ** 2)
+                            pair_RL = np.sqrt((p1.eta() - p2.eta()) ** 2 + (p1.delta_phi_to(p2)) ** 2)
+                            q1 = p1.python_info().charge
+                            q2 = p2.python_info().charge
+                            charge_type = self.get_charge_type(q1, q2)
+                            getattr(self, hname.format(observable+charge_type+"_mx", jetR, obs_label)).Fill(jet_pt_subtracted, pair_RL, pair_weight)
+                            getattr(self, hname.format(observable+"_T_mx", jetR, obs_label)).Fill(jet_pt_subtracted, pair_RL, pair_weight)
+                            getattr(self, hname.format(observable+"_Q_mx", jetR, obs_label)).Fill(jet_pt_subtracted, pair_RL, q1*q2*pair_weight)
+                            # we fill twice to get the reverse pair order as well
+                            getattr(self, hname.format(observable+charge_type+"_mx", jetR, obs_label)).Fill(jet_pt_subtracted, pair_RL, pair_weight)
+                            getattr(self, hname.format(observable+"_T_mx", jetR, obs_label)).Fill(jet_pt_subtracted, pair_RL, pair_weight)
+                            getattr(self, hname.format(observable+"_Q_mx", jetR, obs_label)).Fill(jet_pt_subtracted, pair_RL, q1*q2*pair_weight)
 
             if 'jet_pt' in observable:
                 getattr(self, hname.format(observable, jetR, obs_label)).Fill(jet_pt_subtracted)  
@@ -247,11 +266,11 @@ class ProcessData_ENC(process_data_base_pPb.ProcessDataBase):
 
     def get_charge_type(self, q1, q2):
         if q1 > 0 and q2 > 0:
-            return '_PP'
+            return '_P'
         elif q1 * q2 == -1:
             return '_PM'
         else:
-            return '_MM'
+            return '_M'
         
     def get_pair_type(self, uidx1, uidx2):
         # jet parts have uidx 0, cone1 (+angle) has uidx +1, cone2 (-angle) has uidx -1

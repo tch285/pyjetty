@@ -104,8 +104,19 @@ class ProcessDataBase(process_base.ProcessBase):
 
         self.do_perpendicular_cone = config['do_perpendicular_cone']
         self.randomize_cone = config['randomize_cone']
+        self.mixed_cone = config['mixed_cone'] if 'mixed_cone' in config else False
+        self.matched_cone = config['matched_cone'] if 'matched_cone' in config else False
         logger.info(f"Perp cone: {self.do_perpendicular_cone}")
         logger.info(f"Random cone: {self.randomize_cone}")
+        logger.info(f"Mixed cone: {self.mixed_cone}")
+        logger.info(f"Cone radius matching: {self.matched_cone}")
+        if self.randomize_cone:
+            if 'randomize_cone_seed' in config and config['randomize_cone_seed']:
+                self.rng_seed = config['randomize_cone_seed']
+            else:
+                self.rng_seed = None
+            logger.info(f"Random cone RNG built with seed: {self.rng_seed}")
+            self.rng = np.random.default_rng(seed = self.rng_seed)
         
         if self.do_median_subtraction or self.do_perpendicular_cone:
             self.is_pp = False
@@ -374,7 +385,7 @@ class ProcessDataBase(process_base.ProcessBase):
         # print('Fill track histograms')
         # [[self.fillTrackHistograms(track) for track in fj_particles] for fj_particles in self.df_fjparticles]
         # print('--- {} seconds ---'.format(time.time() - self.start_time))
-        
+
         logger.info('Finding jets...')
         fj.ClusterSequence.print_banner()
         # print()
@@ -383,7 +394,7 @@ class ProcessDataBase(process_base.ProcessBase):
         # [self.analyze_event(fj_particles) for fj_particles in self.df_fjparticles]
         # [self.analyze_event(fj_particles) for fj_particles in self.df_fjparticles['fj']]
         [self.analyze_event(fj_particles, mult) for fj_particles, mult in zip(self.df_fjparticles['parts'], self.df_fjparticles['mult'])]
-        
+
         logger.info('Analyzed all events: --- {} seconds ---'.format(time.time() - self.start_time))
         logger.info('Saving THn...')
         process_base.ProcessBase.save_thn_th3_objects(self)
@@ -508,21 +519,19 @@ class ProcessDataBase(process_base.ProcessBase):
                 #             jets_reselected.append(jet)
                 jets_reselected = [jet for jet in jets_selected if jet.perp() - rho * C_area * jet.area() > 5]
                 if self.do_perpendicular_cone:
-                    jets_with_perpcones = [self.attach_perp_cones(fj_particles, jet, coneR = jetR) for jet in jets_reselected]
+                    jets_with_perpcones = [self.attach_perp_cones(fj_particles, jet, jetR) for jet in jets_reselected]
                     self.analyze_jets(fj_particles, jets_with_perpcones, jetR, rho_bge=rho*C_area)
                 else:
                     self.analyze_jets(fj_particles, jets_reselected, jetR, rho_bge=rho*C_area)
 
             else:
-            
                 for i, R_max in enumerate(self.max_distance):
-                                        
                     if self.debug_level > 1:
                         print('R_max: {}'.format(R_max))
-                        
+
                     # Keep track of whether to fill R_max-independent histograms
                     self.fill_Rmax_indep_hists = (i == 0)
-                    
+
                     # Perform constituent subtraction
                     rho = self.constituent_subtractor[i].bge_rho.rho()
                     if self.fill_R_indep_hists and self.fill_Rmax_indep_hists:
@@ -535,10 +544,11 @@ class ProcessDataBase(process_base.ProcessBase):
                     
                     self.analyze_jets(jets_selected, jetR, R_max = R_max)
 
-    def attach_perp_cones(self, parts, jet, coneR):
+    def attach_perp_cones(self, parts, jet, jetR):
+        coneR = np.sqrt(jet.area() / np.pi) if self.matched_cone else jetR
         cone_1 = fj.vectorPJ()
         cone_2 = fj.vectorPJ()
-        angle = np.pi / 2 if not self.randomize_cone else np.random.uniform(np.pi / 3, 2 * np.pi / 3)
+        angle = np.pi / 2 if not self.randomize_cone else self.rng.uniform(low = np.pi / 3, high = 2 * np.pi / 3)
         # jet_phi_1, jet_phi_2 = (jet.phi() + angle) % (2 * np.pi), (jet.phi() - angle) % (2 * np.pi)
         rot_jet_1 = fj.PseudoJet()
         rot_jet_1.reset_PtYPhiM(jet.pt(), jet.rap(), jet.phi() + angle, jet.m())
