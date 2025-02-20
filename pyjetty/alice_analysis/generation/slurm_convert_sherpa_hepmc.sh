@@ -36,4 +36,5 @@ file=$(sed -n "${SLURM_ARRAY_TASK_ID}p" /rstorage/mhwang/sherpa/sherpa_ahadic.tx
 # done
 
 cd /software/users/mhwang/mypyjetty/pyjetty/pyjetty/alice_analysis/generation/ || return
-srun process_convert_herwig_hepmc.sh "$file" "$SLURM_ARRAY_JOB_ID" "$SLURM_ARRAY_TASK_ID"
+# srun process_convert_herwig_hepmc.sh "$file" "$SLURM_ARRAY_JOB_ID" "$SLURM_ARRAY_TASK_ID"
+./process_convert_herwig_hepmc.sh "$file" "$SLURM_ARRAY_JOB_ID" "$SLURM_ARRAY_TASK_ID"

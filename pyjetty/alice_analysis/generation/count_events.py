@@ -1,75 +1,51 @@
 #!/usr/bin/env python3
 
-# import os
-# import argparse
 import sys
-import time
 
-# import pyhepmc
 import pyhepmc_ng
 
-# import hepmc2antuple_base
-
-# jit improves execution time by 18% - tested with jetty pythia8 events
-# BUT produces invalid root file
-# from numba import jit
-# @jit
-
-
-# Open the file in read mode
-# file_ahadic = "/rstorage/ploskon/eec_sherpa_charm/charm_jetpt15/list.txt"
-# file_lund = "/rstorage/ploskon/eec_sherpa_charm/charm_jetpt15_lund/list.txt"
-# new_file = "/software/users/ploskon/eecmc/list__charm_13TeV_jetpt_10.txt"
-# new_file_lund = "/software/users/ploskon/eecmc/list__charm_13TeV_lund_jetpt_10.txt"
 # filename = "/rstorage/ploskon/eec_sherpa_inclusive_5TeV/sherpa2x/jetpt20/sherpa_LHC_jets_20.hepmc"
 # filename = "/rstorage/mhwang/sherpa/sherpa_ahadic.txt"
 filenames = ["/rstorage/mhwang/sherpa/sherpa_ahadic.txt", "/rstorage/mhwang/sherpa/sherpa_lund.txt"]
 
-for filename in filenames:
-  with open(filename, 'r') as file:
-    # Loop through each line in the file
-    for ifile, input_file in enumerate(file):
-      # if ifile != 1:
-      #   continue
-      # Process each line as needed
-      print("input file: ", ifile, input_file.strip())  # strip() removes any leading/trailing whitespace
-      input_file = input_file.strip()
+def count_events(hepmc_filename):
+  hepmc_filename = hepmc_filename.strip()
+  print("input file:", hepmc_filename)
 
-      # input_file = "/rstorage/ploskon/eec_sherpa_charm/charm_jetpt15/999983/sherpa_LHC_jets_15.0.hepmc"
-      # input_file = "/software/users/ploskon/eecmc/sherpa2x/charm_jetpt10_lund/sherpa_LHC_jets_10.0.hepmc"
-      hepmc = 3
-        
-      if hepmc == 3:
-        # input_hepmc = pyhepmc.io.ReaderAscii(input_file)
-        input_hepmc = pyhepmc_ng.ReaderAscii(input_file)
-      if hepmc == 2:
-        # input_hepmc = pyhepmc.io.ReaderAsciiHepMC2(input_file)
-        input_hepmc = pyhepmc_ng.ReaderAsciiHepMC2(input_file)
+  hepmc = 3
 
-      if input_hepmc.failed():
-        print ("[error] unable to read from {}".format(input_file))
-        sys.exit(1)
+  if hepmc == 3:
+    # input_hepmc = pyhepmc.io.ReaderAscii(hepmc_filename)
+    input_hepmc = pyhepmc_ng.ReaderAscii(hepmc_filename)
+  if hepmc == 2:
+    # input_hepmc = pyhepmc.io.ReaderAsciiHepMC2(hepmc_filename)
+    input_hepmc = pyhepmc_ng.ReaderAsciiHepMC2(hepmc_filename)
 
-      # event_hepmc = pyhepmc.GenEvent()
-      event_hepmc = pyhepmc_ng.GenEvent()
-      print("done!")
+  if input_hepmc.failed():
+    print (f"[error] unable to read from {hepmc_filename}")
+    sys.exit(1)
 
-      # evid = 0
-      # for event in input_hepmc:
-      #   if evid % 10000 == 0:
-      #     print(evid)
-      #   evid += 1
-      
-      evid = 1
-      while not input_hepmc.failed():
-        ev = input_hepmc.read_event(event_hepmc)
-        # print("input_hepmc", evid, input_hepmc.failed())
-        if input_hepmc.failed():
-          break
-        # self.fill_event(event_hepmc)
-        # self.increment_event()
-        # if evid > 0 and 250000 < evid:
-        #   break
-        evid+=1
+  evid = 0
+  for event in input_hepmc:
+    if evid % 10000 == 0:
+      print(evid)
+    evid += 1
 
-      print("Total number of events in hepmc file", ifile, "is ", evid)
+  # event_hepmc = pyhepmc.GenEvent()
+  # event_hepmc = pyhepmc_ng.GenEvent()
+  # evid = 0
+  # while not input_hepmc.failed():
+  #   ev = input_hepmc.read_event(event_hepmc)
+  #   # print("input_hepmc", evid, input_hepmc.failed())
+  #   if input_hepmc.failed():
+  #     break
+  #   evid+=1
+
+  print(f"Total number of events in hepmc file {hepmc_filename} is {evid}")
+
+count_events("/rstorage/ploskon/eec_sherpa_inclusive_5TeV/sherpa2x/jetpt40_lund/sherpa_LHC_jets_40.0.hepmc")
+# for filename in filenames:
+#   with open(filename, 'r') as file:
+#     # Loop through each line in the file
+#     for ifile, hepmc_filename in enumerate(file):
+#       count_events(hepmc_filename)

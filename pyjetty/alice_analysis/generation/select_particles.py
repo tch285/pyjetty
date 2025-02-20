@@ -87,7 +87,6 @@ def accept_particle_hybrid(part, pdg, parton):
 
 #---------------------------------------------------------------
 def accept_particle_sherpa(part, status, end_vertex, pid, pdg, parton=False):
-  
   if parton:
     raise NotImplementedError('Parton tree not implemented yet for Sherpa')
 
