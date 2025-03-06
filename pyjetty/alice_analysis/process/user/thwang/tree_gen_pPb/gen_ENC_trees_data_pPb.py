@@ -328,6 +328,32 @@ class Generator_Tree_Data_ENC(process_data_base_pPb.ProcessDataBase):
 
             self.pair_tree.Fill()
 
+        for p1 in jet.python_info().perpcone1:
+            for p2 in jet.python_info().perpcone2:
+                pair_id1_arr[0] = p1.user_index()
+                pair_id2_arr[0] = p2.user_index()
+                pair_pT1_arr[0] = p1.pt()
+                pair_pT2_arr[0] = p2.pt()
+                pair_q1_arr[0] = p1.python_info().charge
+                pair_q2_arr[0] = p2.python_info().charge
+                pair_weight_arr[0] = p1.pt() * p2.pt() / (jet_pTsub * jet_pTsub)
+                pair_RL_arr[0] = self.deltaR(p1, p2)
+                pair_deta_arr[0] = p2.eta() - p1.eta()
+                pair_dphi_arr[0] = p1.delta_phi_to(p2)
+
+                self.pair_tree.Fill()
+
+                # Swap to reverse order and fill again
+                pair_id1_arr[0] = p2.user_index()
+                pair_id2_arr[0] = p1.user_index()
+                pair_pT1_arr[0] = p2.pt()
+                pair_pT2_arr[0] = p1.pt()
+                pair_q1_arr[0] = p2.python_info().charge
+                pair_q2_arr[0] = p1.python_info().charge
+                pair_deta_arr[0] = p1.eta() - p2.eta()
+                pair_dphi_arr[0] = p2.delta_phi_to(p1)
+
+                self.pair_tree.Fill()
     # def deltaR(self, p1, p2):
     #     return np.sqrt(p1.delta_phi_to(p2) ** 2 + (p1.eta() - p2.eta()) ** 2)
 

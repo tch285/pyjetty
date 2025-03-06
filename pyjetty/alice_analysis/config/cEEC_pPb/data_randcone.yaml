@@ -15,6 +15,7 @@ do_median_subtraction: True
 do_perpendicular_cone: True
 randomize_cone: True
 randomize_cone_seed: False
+mixed_cone: True
 
 # do_rho_subtraction: True
 do_feedin_check: False

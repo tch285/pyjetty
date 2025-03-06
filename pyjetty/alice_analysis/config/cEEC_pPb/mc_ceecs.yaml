@@ -1,36 +1,46 @@
 # Configuration for intermediary TTree processing into final analysis output objects
 
 targets: 
-  - E2C_M_det_jj
-  - E2C_M_gen_jj
-  - E2C_M_det_jp
-  - E2C_M_gen_jp
-  - E2C_M_det_pp
-  - E2C_M_gen_pp
-  - E2C_PM_det_jj
-  - E2C_PM_gen_jj
-  - E2C_PM_det_jp
-  - E2C_PM_gen_jp
-  - E2C_PM_det_pp
-  - E2C_PM_gen_pp
-  - E2C_P_det_jj
-  - E2C_P_gen_jj
-  - E2C_P_det_jp
-  - E2C_P_gen_jp
-  - E2C_P_det_pp
-  - E2C_P_gen_pp
-  - E2C_Q_det_jj
-  - E2C_Q_gen_jj
-  - E2C_Q_det_jp
-  - E2C_Q_gen_jp
-  - E2C_Q_det_pp
-  - E2C_Q_gen_pp
   - E2C_T_det_jj
   - E2C_T_gen_jj
   - E2C_T_det_jp
   - E2C_T_gen_jp
   - E2C_T_det_pp
   - E2C_T_gen_pp
+  - E2C_T_det_mx
+  - E2C_T_gen_mx
+  - E2C_Q_det_jj
+  - E2C_Q_gen_jj
+  - E2C_Q_det_jp
+  - E2C_Q_gen_jp
+  - E2C_Q_det_pp
+  - E2C_Q_gen_pp
+  - E2C_Q_det_mx
+  - E2C_Q_gen_mx
+  - E2C_P_det_jj
+  - E2C_P_gen_jj
+  - E2C_P_det_jp
+  - E2C_P_gen_jp
+  - E2C_P_det_pp
+  - E2C_P_gen_pp
+  - E2C_P_det_mx
+  - E2C_P_gen_mx
+  - E2C_M_det_jj
+  - E2C_M_gen_jj
+  - E2C_M_det_jp
+  - E2C_M_gen_jp
+  - E2C_M_det_pp
+  - E2C_M_gen_pp
+  - E2C_M_det_mx
+  - E2C_M_gen_mx
+  - E2C_PM_det_jj
+  - E2C_PM_gen_jj
+  - E2C_PM_det_jp
+  - E2C_PM_gen_jp
+  - E2C_PM_det_pp
+  - E2C_PM_gen_pp
+  - E2C_PM_det_mx
+  - E2C_PM_gen_mx
   - jet_pt_det
   - jet_pt_gen
 
@@ -99,7 +109,7 @@ rules:
             - [h, 2, "eec PM;jet pt;R_{L}", pT_bins, RL_bins, pTjetsub, RL, weight]
       pp:
         dir:
-          - [f, id1 != 0 && id2 != 0]
+          - [f, (id1 > 0 && id2 > 0) || (id1 < 0 && id2 < 0)]
         E2C_T_det_pp:
           dir:
             - [h, 2, "eec T;jet pt;R_{L}", pT_bins, RL_bins, pTjetsub, RL, weight]
@@ -116,6 +126,28 @@ rules:
             - [f, q1 < 0 && q2 < 0]
             - [h, 2, "eec M;jet pt;R_{L}", pT_bins, RL_bins, pTjetsub, RL, weight]
         E2C_PM_det_pp:
+          dir:
+            - [f, (q1 * q2) < 0]
+            - [h, 2, "eec PM;jet pt;R_{L}", pT_bins, RL_bins, pTjetsub, RL, weight]
+      mx:
+        dir:
+          - [f, (id1 > 0 && id2 < 0) || (id1 < 0 && id2 > 0)]
+        E2C_T_det_mx:
+          dir:
+            - [h, 2, "eec T;jet pt;R_{L}", pT_bins, RL_bins, pTjetsub, RL, weight]
+        E2C_Q_det_mx: 
+          dir:
+            - [d, qw, q1 * q2 * weight]
+            - [h, 2, "eec Q;jet pt;R_{L}", pT_bins, RL_bins, pTjetsub, RL, qw]
+        E2C_P_det_mx:
+          dir:
+            - [f, q1 > 0 && q2 > 0]
+            - [h, 2, "eec P;jet pt;R_{L}", pT_bins, RL_bins, pTjetsub, RL, weight]
+        E2C_M_det_mx:
+          dir:
+            - [f, q1 < 0 && q2 < 0]
+            - [h, 2, "eec M;jet pt;R_{L}", pT_bins, RL_bins, pTjetsub, RL, weight]
+        E2C_PM_det_mx:
           dir:
             - [f, (q1 * q2) < 0]
             - [h, 2, "eec PM;jet pt;R_{L}", pT_bins, RL_bins, pTjetsub, RL, weight]
@@ -167,7 +199,7 @@ rules:
             - [h, 2, "eec PM;jet pt;R_{L}", pT_bins, RL_bins, pTjetsub, RL, weight]
       pp:
         dir:
-          - [f, id1 != 0 && id2 != 0]
+          - [f, (id1 > 0 && id2 > 0) || (id1 < 0 && id2 < 0)]
         E2C_T_gen_pp:
           dir:
             - [h, 2, "eec T;jet pt;R_{L}", pT_bins, RL_bins, pTjetsub, RL, weight]
@@ -184,6 +216,28 @@ rules:
             - [f, q1 < 0 && q2 < 0]
             - [h, 2, "eec M;jet pt;R_{L}", pT_bins, RL_bins, pTjetsub, RL, weight]
         E2C_PM_gen_pp:
+          dir:
+            - [f, (q1 * q2) < 0]
+            - [h, 2, "eec PM;jet pt;R_{L}", pT_bins, RL_bins, pTjetsub, RL, weight]
+      mx:
+        dir:
+          - [f, (id1 > 0 && id2 < 0) || (id1 < 0 && id2 > 0)]
+        E2C_T_gen_mx:
+          dir:
+            - [h, 2, "eec T;jet pt;R_{L}", pT_bins, RL_bins, pTjetsub, RL, weight]
+        E2C_Q_gen_mx: 
+          dir:
+            - [d, qw, q1 * q2 * weight]
+            - [h, 2, "eec Q;jet pt;R_{L}", pT_bins, RL_bins, pTjetsub, RL, qw]
+        E2C_P_gen_mx:
+          dir:
+            - [f, q1 > 0 && q2 > 0]
+            - [h, 2, "eec P;jet pt;R_{L}", pT_bins, RL_bins, pTjetsub, RL, weight]
+        E2C_M_gen_mx:
+          dir:
+            - [f, q1 < 0 && q2 < 0]
+            - [h, 2, "eec M;jet pt;R_{L}", pT_bins, RL_bins, pTjetsub, RL, weight]
+        E2C_PM_gen_mx:
           dir:
             - [f, (q1 * q2) < 0]
             - [h, 2, "eec PM;jet pt;R_{L}", pT_bins, RL_bins, pTjetsub, RL, weight]

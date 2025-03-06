@@ -495,7 +495,34 @@ class Generator_Tree_MC_ENC(process_mc_base_pPb.ProcessMCBase):
             pair_det_dphi_arr[0] = p1.delta_phi_to(p2)
 
             self.pair_det_tree.Fill()
-    
+
+        for p1 in jet.python_info().perpcone1:
+            for p2 in jet.python_info().perpcone2:
+                pair_det_id1_arr[0] = p1.user_index()
+                pair_det_id2_arr[0] = p2.user_index()
+                pair_det_pT1_arr[0] = p1.pt()
+                pair_det_pT2_arr[0] = p2.pt()
+                pair_det_q1_arr[0] = p1.python_info().charge
+                pair_det_q2_arr[0] = p2.python_info().charge
+                pair_det_weight_arr[0] = p1.pt() * p2.pt() / (jet_pTsub * jet_pTsub)
+                pair_det_RL_arr[0] = self.deltaR(p1, p2)
+                pair_det_deta_arr[0] = p2.eta() - p1.eta()
+                pair_det_dphi_arr[0] = p1.delta_phi_to(p2)
+
+                self.pair_det_tree.Fill()
+
+                # Swap to reverse order and fill again
+                pair_det_id1_arr[0] = p2.user_index()
+                pair_det_id2_arr[0] = p1.user_index()
+                pair_det_pT1_arr[0] = p2.pt()
+                pair_det_pT2_arr[0] = p1.pt()
+                pair_det_q1_arr[0] = p2.python_info().charge
+                pair_det_q2_arr[0] = p1.python_info().charge
+                pair_det_deta_arr[0] = p1.eta() - p2.eta()
+                pair_det_dphi_arr[0] = p2.delta_phi_to(p1)
+
+                self.pair_det_tree.Fill()
+
     def fill_pair_gen_tree(self, jet, rho_bge):
         jetwcone1 = fj.vectorPJ()
         jetwcone2 = fj.vectorPJ()
@@ -566,6 +593,33 @@ class Generator_Tree_MC_ENC(process_mc_base_pPb.ProcessMCBase):
             pair_gen_dphi_arr[0] = p1.delta_phi_to(p2)
 
             self.pair_gen_tree.Fill()
+
+        for p1 in jet.python_info().perpcone1:
+            for p2 in jet.python_info().perpcone2:
+                pair_gen_id1_arr[0] = p1.user_index()
+                pair_gen_id2_arr[0] = p2.user_index()
+                pair_gen_pT1_arr[0] = p1.pt()
+                pair_gen_pT2_arr[0] = p2.pt()
+                pair_gen_q1_arr[0] = p1.python_info().charge
+                pair_gen_q2_arr[0] = p2.python_info().charge
+                pair_gen_weight_arr[0] = p1.pt() * p2.pt() / (jet_pTsub * jet_pTsub)
+                pair_gen_RL_arr[0] = self.deltaR(p1, p2)
+                pair_gen_deta_arr[0] = p2.eta() - p1.eta()
+                pair_gen_dphi_arr[0] = p1.delta_phi_to(p2)
+
+                self.pair_gen_tree.Fill()
+
+                # Swap to reverse order and fill again
+                pair_gen_id1_arr[0] = p2.user_index()
+                pair_gen_id2_arr[0] = p1.user_index()
+                pair_gen_pT1_arr[0] = p2.pt()
+                pair_gen_pT2_arr[0] = p1.pt()
+                pair_gen_q1_arr[0] = p2.python_info().charge
+                pair_gen_q2_arr[0] = p1.python_info().charge
+                pair_gen_deta_arr[0] = p1.eta() - p2.eta()
+                pair_gen_dphi_arr[0] = p2.delta_phi_to(p1)
+
+                self.pair_gen_tree.Fill()
 
 ##################################################################
 if __name__ == "__main__":

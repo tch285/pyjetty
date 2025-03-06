@@ -16,6 +16,11 @@ targets:
   - E2C_P_pp
   - E2C_M_pp
   - E2C_PM_pp
+  - E2C_T_mx
+  - E2C_Q_mx
+  - E2C_P_mx
+  - E2C_M_mx
+  - E2C_PM_mx
   - jet_pt
 
 jetR: 0.4
@@ -45,7 +50,8 @@ rules:
         - 0.013
     dir:
       - [f, pT1 > ptcut && pT2 > ptcut]
-      - [d, dphistar, dphi - q2*asin(0.0825/pT2) + q1*asin(0.0825/pT1)]
+      - [d, dphistar, dphi + q2*asin(0.0825/pT2) - q1*asin(0.0825/pT1)] # for pp (negative B)
+      # - [d, dphistar, dphi - q2*asin(0.0825/pT2) + q1*asin(0.0825/pT1)] # for pPb (positive B)
       - [f, abs(deta) > detacut || abs(dphistar) > dphistarcut]
     cEEC:
       tree: pairs
@@ -95,7 +101,7 @@ rules:
             - [h, 2, "eec PM;jet pt;R_{L}", pT_bins, RL_bins, pTjetsub, RL, weight]
       pp:
         dir:
-          - [f, id1 != 0 && id2 != 0]
+          - [f, (id1 > 0 && id2 > 0) || (id1 < 0 && id2 < 0)]
         E2C_T_pp:
           dir:
             - [h, 2, "eec T;jet pt;R_{L}", pT_bins, RL_bins, pTjetsub, RL, weight]
@@ -112,6 +118,28 @@ rules:
             - [f, q1 < 0 && q2 < 0]
             - [h, 2, "eec M;jet pt;R_{L}", pT_bins, RL_bins, pTjetsub, RL, weight]
         E2C_PM_pp:
+          dir:
+            - [f, (q1 * q2) < 0]
+            - [h, 2, "eec PM;jet pt;R_{L}", pT_bins, RL_bins, pTjetsub, RL, weight]
+      mx:
+        dir:
+          - [f, (id1 > 0 && id2 < 0) || (id1 < 0 && id2 > 0)]
+        E2C_T_mx:
+          dir:
+            - [h, 2, "eec T;jet pt;R_{L}", pT_bins, RL_bins, pTjetsub, RL, weight]
+        E2C_Q_mx: 
+          dir:
+            - [d, qw, q1 * q2 * weight]
+            - [h, 2, "eec Q;jet pt;R_{L}", pT_bins, RL_bins, pTjetsub, RL, qw]
+        E2C_P_mx:
+          dir:
+            - [f, q1 > 0 && q2 > 0]
+            - [h, 2, "eec P;jet pt;R_{L}", pT_bins, RL_bins, pTjetsub, RL, weight]
+        E2C_M_mx:
+          dir:
+            - [f, q1 < 0 && q2 < 0]
+            - [h, 2, "eec M;jet pt;R_{L}", pT_bins, RL_bins, pTjetsub, RL, weight]
+        E2C_PM_mx:
           dir:
             - [f, (q1 * q2) < 0]
             - [h, 2, "eec PM;jet pt;R_{L}", pT_bins, RL_bins, pTjetsub, RL, weight]

@@ -14,7 +14,7 @@ ENC_pair_cut: False
 do_median_subtraction: True
 do_perpendicular_cone: True
 randomize_cone: False
-mixed_cone: False
+mixed_cone: True
 matched_cone: True
 
 # do_rho_subtraction: True
