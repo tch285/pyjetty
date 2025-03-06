@@ -153,6 +153,7 @@ class ProcessDataBase(process_base.ProcessBase):
       self.subleading_jet = config['subleading_jet']
     else:
       self.subleading_jet = False
+    self.use_ev_id_ext = config['use_ev_id_ext'] if 'use_ev_id_ext' in config else True
 
     # NB: safeguard, make sure to only process one type at a time
     if (self.leading_jet and (not self.subleading_jet)) or ((not self.leading_jet) and self.subleading_jet):
@@ -195,7 +196,7 @@ class ProcessDataBase(process_base.ProcessBase):
     # Use IO helper class to convert ROOT TTree into a SeriesGroupBy object of fastjet particles per event
     print('--- {} seconds ---'.format(time.time() - self.start_time))
     io = process_io.ProcessIO(input_file=self.input_file, track_tree_name='tree_Particle',
-                              is_pp=self.is_pp, use_ev_id_ext=True, is_mc = False)
+                              is_pp=self.is_pp, use_ev_id_ext=self.use_ev_id_ext, is_mc = False)
     self.df_fjparticles = io.load_data(m=self.m)
     self.nEvents = len(self.df_fjparticles.index)
     self.nTracks = len(io.track_df.index)
