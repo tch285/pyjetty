@@ -16,7 +16,6 @@ import argparse
 import numpy as np
 import ROOT
 # import yaml
-import array
 # import math
 
 # Fastjet via python (from external library heppy)

@@ -102,8 +102,8 @@ class ProcessDataBase(process_base.ProcessBase):
         self.do_median_subtraction = config['do_median_subtraction']
         logger.info(f"Rho median subtraction: {self.do_median_subtraction}")
 
-        self.do_perpendicular_cone = config['do_perpendicular_cone']
-        self.randomize_cone = config['randomize_cone']
+        self.do_perpendicular_cone = config['do_perpendicular_cone'] if 'do_perpendicular_cone' in config else True
+        self.randomize_cone = config['randomize_cone'] if 'randomize_cone' in config else False
         self.mixed_cone = config['mixed_cone'] if 'mixed_cone' in config else False
         self.matched_cone = config['matched_cone'] if 'matched_cone' in config else False
         logger.info(f"Perp cone: {self.do_perpendicular_cone}")
@@ -139,44 +139,34 @@ class ProcessDataBase(process_base.ProcessBase):
                 logger.warning("Mult threshold is longer than 2, taking first two values only")
                 self.mult_threshold = config['mult_threshold'][:2]
 
-        if 'ENC_pair_cut' in config:
-            self.ENC_pair_cut = config['ENC_pair_cut']
-        else:
-            self.ENC_pair_cut = False
-
+        self.ENC_pair_cut = config['ENC_pair_cut'] if 'ENC_pair_cut' in config else False
+        self.apply_track_pT_cut = config['apply_track_pT_cut'] if 'apply_track_pT_cut' in config else False
+        logger.info(f"Enforce pT minimum: {self.apply_track_pT_cut}")
         self.do_reshuffle = config['do_reshuffle'] if 'do_reshuffle' in config else False
         
-        # Create dictionaries to store grooming settings and observable settings for each observable
-        # Each dictionary entry stores a list of subconfiguration parameters
-        #   The observable list stores the observable setting, e.g. subjetR
-        #   The grooming list stores a list of grooming settings {'sd': [zcut, beta]} or {'dg': [a]}
         self.observable_list = config['process_observables'] if 'process_observables' in config else []
         self.obs_settings = {}
         self.obs_grooming_settings = {}
         for observable in self.observable_list:
-        
             obs_config_dict = config[observable]
-            # obs_config_list = [name for name in list(obs_config_dict.keys()) if 'config' in name ]
-            
+
             obs_subconfig_list = [name for name in list(obs_config_dict.keys()) if 'config' in name ]
             self.obs_settings[observable] = self.utils.obs_settings(observable, obs_config_dict, obs_subconfig_list)
             self.obs_grooming_settings[observable] = self.utils.grooming_settings(obs_config_dict)
-            
-        # Construct set of unique grooming settings
+
         self.grooming_settings = []
         lists_grooming = [self.obs_grooming_settings[obs] for obs in self.observable_list]
         for observable in lists_grooming:
             for setting in observable:
                 if setting not in self.grooming_settings and setting is not None:
                     self.grooming_settings.append(setting)
-                    
+
     #---------------------------------------------------------------
     # Main processing function
     #---------------------------------------------------------------
     def process_data(self):
-        
         self.start_time = time.time()
-        
+
         # Use IO helper class to convert ROOT TTree into a SeriesGroupBy object of fastjet particles per event
         logger.info('Starting processing: --- {} seconds ---'.format(time.time() - self.start_time))
         io = process_io.ProcessIO(input_file=self.input_file, track_tree_name='tree_Particle',
@@ -187,17 +177,17 @@ class ProcessDataBase(process_base.ProcessBase):
         self.nEvents = len(self.df_fjparticles.index)
         logger.info(f"Number of events: {self.nEvents}")
         self.nTracks = len(io.track_df.index)
-        
+
         # Initialize histograms
         self.initialize_output_objects()
-        
+
         # Create constituent subtractor, if configured
         if not self.is_pp and not self.is_pA:
             self.constituent_subtractor = [CEventSubtractor(max_distance=R_max, alpha=self.alpha, max_eta=self.max_eta,
                                                             bge_rho_grid_size=self.bge_rho_grid_size, max_pt_correct=self.max_pt_correct,
                                                             ghost_area=self.ghost_area, distance_type=fjcontrib.ConstituentSubtractor.deltaR) 
                                            for R_max in self.max_distance]
-        
+
         # Create median subtractor, if configured
         if self.do_median_subtraction:
             self.jet_def_medsub = {}
@@ -215,18 +205,17 @@ class ProcessDataBase(process_base.ProcessBase):
         # Find jets and fill histograms
         logger.info('Analyzing events...')
         self.analyze_events()
-        
+
         # Plot histograms
         logger.info('Saving histograms...')
         process_base.ProcessBase.save_output_objects(self)
 
         logger.info('Completed processing: --- {} seconds ---'.format(time.time() - self.start_time))
-    
+
     #---------------------------------------------------------------
     # Initialize histograms
     #---------------------------------------------------------------
     def initialize_output_objects(self):
-    
         # Initialize user-specific histograms
         self.initialize_user_output_objects()
         
@@ -425,7 +414,10 @@ class ProcessDataBase(process_base.ProcessBase):
                 logger.warning('WARNING: Duplicate particles may be present:')
                 logger.warning([p.user_index() for p in fj_particles])
                 logger.warning([p.pt() for p in fj_particles])
-    
+        if self.apply_track_pT_cut:
+            fj_particles_cut = fj.vectorPJ()
+            [fj_particles_cut.push_back(part) for part in fj_particles if part.pt() > 0.15]
+            fj_particles = fj_particles_cut
         # Perform constituent subtraction for each R_max (do this once, for all jetR)
         if not self.is_pp and not self.is_pA:
             fj_particles_subtracted = [self.constituent_subtractor[i].process_event(fj_particles) for i, R_max in enumerate(self.max_distance)]
@@ -520,9 +512,9 @@ class ProcessDataBase(process_base.ProcessBase):
                 jets_reselected = [jet for jet in jets_selected if jet.perp() - rho * C_area * jet.area() > 5]
                 if self.do_perpendicular_cone:
                     jets_with_perpcones = [self.attach_perp_cones(fj_particles, jet, jetR) for jet in jets_reselected]
-                    self.analyze_jets(fj_particles, jets_with_perpcones, jetR, rho_bge=rho*C_area)
+                    self.analyze_jets(jets_with_perpcones, jetR, rho_bge=rho*C_area)
                 else:
-                    self.analyze_jets(fj_particles, jets_reselected, jetR, rho_bge=rho*C_area)
+                    self.analyze_jets(jets_reselected, jetR, rho_bge=rho*C_area)
 
             else:
                 for i, R_max in enumerate(self.max_distance):
@@ -580,7 +572,7 @@ class ProcessDataBase(process_base.ProcessBase):
     #---------------------------------------------------------------
     # Analyze jets of a given event.
     #---------------------------------------------------------------
-    def analyze_jets(self, fj_particles, jets_selected, jetR, rho_bge=0, R_max = None):
+    def analyze_jets(self, jets_selected, jetR, rho_bge=0, R_max = None):
         # Set suffix for filling histograms
         if R_max:
             suffix = '_Rmax{}'.format(R_max)

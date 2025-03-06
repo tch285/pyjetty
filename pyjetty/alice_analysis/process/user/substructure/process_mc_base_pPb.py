@@ -164,7 +164,7 @@ class ProcessMCBase(process_base.ProcessBase):
         self.strict_mc_match = config['strict_mc_match'] if 'strict_mc_match' in config else False
         
         self.do_perpendicular_cone = config['do_perpendicular_cone']
-        self.randomize_cone = config['randomize_cone']
+        self.randomize_cone = config['randomize_cone'] if 'randomize_cone' in config else False
         if self.do_constituent_subtraction:
             self.is_pp = False
             self.is_pA = False
@@ -209,7 +209,7 @@ class ProcessMCBase(process_base.ProcessBase):
         if 'pTRL_binning' in config.keys():
             self.pTRL_min, self.pTRL_max, self.pTRL_nbins = config["pTRL_binning"]
             self.pTRL_bins = logbins(self.pTRL_min,self.pTRL_max,self.pTRL_nbins)
-        
+
         if "kT_binning" in config.keys():
             self.kT_min, self.kT_max, self.kT_nbins = config["kT_binning"]
             self.kT_bins = linbins(self.kT_min,self.kT_max,self.kT_nbins)
@@ -332,12 +332,11 @@ class ProcessMCBase(process_base.ProcessBase):
             self.df_fjparticles.loc[isnull_det, 'fj_particles_det'] = pandas.Series([fj.vectorPJ()] * isnull_det.sum()).values
             isnull_truth = self.df_fjparticles.fj_particles_truth.isnull()
             self.df_fjparticles.loc[isnull_truth, 'fj_particles_truth'] = pandas.Series([fj.vectorPJ()] * isnull_truth.sum()).values
-        logger.info(f'Det-truth matched: --- {time.time() - self.start_time:.3f} seconds ---')
+        logger.info(f'Event-by-event det-truth matching: --- {time.time() - self.start_time:.3f} seconds ---')
 
         # ------------------------------------------------------------------------
 
         # Setup median subtraction machinery
-
         if self.do_median_subtraction:
             self.jet_def_medsub = {jetR: fj.JetDefinition(fj.kt_algorithm, jetR) for jetR in self.jetR_list}
             # NOTE: may also not need separate truth subtractor

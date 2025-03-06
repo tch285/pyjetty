@@ -27,7 +27,6 @@ import time
 # Data analysis and plotting
 import pandas
 import numpy as np
-# import array
 import ROOT
 import yaml
 import math
@@ -103,7 +102,7 @@ class ProcessMCBase(process_base.ProcessBase):
         # find pt_hat for set of events in input_file, assumes all events in input_file are in the same pt_hat bin
         self.pt_hat_bin = int(input_file.split('/')[len(input_file.split('/'))-4]) # depends on exact format of input_file name
         with open("/global/cfs/projectdirs/alice/alicepro/hiccup/rstorage/alice/data/LHC18b8/scaleFactors.yaml", 'r') as stream:
-                pt_hat_yaml = yaml.safe_load(stream)
+            pt_hat_yaml = yaml.safe_load(stream)
         self.pt_hat = pt_hat_yaml[self.pt_hat_bin]
         logger.info("pt hat bin : " + str(self.pt_hat_bin))
         logger.info("pt hat weight : " + str(self.pt_hat))
@@ -458,7 +457,6 @@ class ProcessMCBase(process_base.ProcessBase):
     # fj_particles is the list of fastjet pseudojets for a single fixed event.
     #---------------------------------------------------------------
     def analyze_event(self, fj_particles_det, fj_particles_truth, fj_particles_det_holes=None, fj_particles_truth_holes=None, particles_mcid_det=None, particles_pid_truth=None):
-        
         self.event_number += 1
         if self.event_number > self.event_number_max:
             return
@@ -491,7 +489,7 @@ class ProcessMCBase(process_base.ProcessBase):
                 logger.debug([p.pt() for p in fj_particles_truth])
 
         ##### CHARGE PARTICLE AND PARTICLE PT > 0.15 CUT
-                # ALSO RESET ALL USER INDICIES to 0
+            # ALSO RESET ALL USER INDICES to 0
         fj_particles_det_pass = fj.vectorPJ()
         for part in fj_particles_det:
             if part.perp() > 0.15:
@@ -628,25 +626,6 @@ class ProcessMCBase(process_base.ProcessBase):
             # Form the combined det-level event
             _ = [fj_particles_hybrid.push_back(p) for p in fj_particles_det]
 
-        """ For debugging """
-        """
-        det_pt_output = "DETECTOR PARTICLES pt: "
-        det_id_output = "DETECTOR PARTICLES id: "
-        for d_part in fj_particles_det:
-                det_pt_output += str(d_part.perp()) + " "
-                det_id_output += str(d_part.user_index()) + " "
-        print(det_pt_output)
-        print(det_id_output)
-        
-        truth_pt_output = "TRUTH PARTICLES pt: "
-        truth_id_output = "TRUTH PARTICLES id: "
-        for d_part in fj_particles_truth:
-                truth_pt_output += str(d_part.perp()) + " "
-                truth_id_output += str(d_part.user_index()) + " "
-        print(truth_pt_output)
-        print(truth_id_output)
-        """    
-
         ############################# JET RECO ################################
         jetR = self.jetR
 
@@ -669,14 +648,13 @@ class ProcessMCBase(process_base.ProcessBase):
 
         # cluster detector/hybrid jets
         if self.is_pp:
-            
             # cs_det = fj.ClusterSequenceArea(fj_particles_det, jet_def, fj.AreaDefinition(fj.active_area_explicit_ghosts))
             cs_det = fj.ClusterSequence(fj_particles_det, jet_def)
             det_jets = fj.sorted_by_pt(jet_selector_det(cs_det.inclusive_jets()))
 
             # KD: EEC and jet-trk preprocessed output
             self.analyze_jets(det_jets, truth_jets, jetR)
-            
+
         else:
 
             # cluster embedded jets and jet pT correction

@@ -134,13 +134,13 @@ class ProcessData_ENC(process_data_base.ProcessDataBase):
                             h.GetYaxis().SetTitle('Counts')
                             setattr(self, name, h)
 
-                            name = 'h_Nconst_JetPt_R{}_{}{}'.format(jetR, trk_thrd, jet_type_label)
-                            pt_bins = linbins(0,200,200)
-                            Nconst_bins = linbins(0,50,50)
-                            h = ROOT.TH2D(name, name, 200, pt_bins, 50, Nconst_bins)
-                            h.GetXaxis().SetTitle('p_{T,ch jet}')
-                            h.GetYaxis().SetTitle('N_{const}')
-                            setattr(self, name, h)
+                            # name = 'h_Nconst_JetPt_R{}_{}{}'.format(jetR, trk_thrd, jet_type_label)
+                            # pt_bins = linbins(0,200,200)
+                            # Nconst_bins = linbins(0,50,50)
+                            # h = ROOT.TH2D(name, name, 200, pt_bins, 50, Nconst_bins)
+                            # h.GetXaxis().SetTitle('p_{T,ch jet}')
+                            # h.GetYaxis().SetTitle('N_{const}')
+                            # setattr(self, name, h)
 
                         if 'E2C' in observable or 'E3C' in observable:
                             name = 'h_{}_JetPt_R{}_{}{}'.format(observable, jetR, trk_thrd, jet_type_label)
@@ -334,7 +334,7 @@ class ProcessData_ENC(process_data_base.ProcessDataBase):
             if c.pt() < trk_thrd:
                 break
             c_select.append(c) # NB: use the break statement since constituents are already sorted
-        nconst_jet = len(c_select)
+        # nconst_jet = len(c_select)
 
         if self.ENC_pair_cut:
             dphi_cut = -9999 # means no dphi cut
@@ -349,7 +349,7 @@ class ProcessData_ENC(process_data_base.ProcessDataBase):
             jet_pt = jet.perp()
         # print('unsubtracted pt',jet.perp(),'subtracted',jet_pt,'# of constituents >',trk_thrd,'is',len(c_select))
         hname = 'h_{}_JetPt_R{}_{}{}'
-        maxpoint = 3
+        maxpoint = 2
         new_corr = ecorrel.CorrelatorBuilder(c_select, jet_pt, maxpoint, 1, dphi_cut, deta_cut)
         for observable in self.observable_list:
             if 'ENC' in observable or 'EEC_noweight' in observable or 'EEC_weight2' in observable:
@@ -376,7 +376,7 @@ class ProcessData_ENC(process_data_base.ProcessDataBase):
 
             if 'jet_pt' in observable:
                 getattr(self, hname.format(observable, jetR, obs_label, suffix)).Fill(jet_pt)
-                getattr(self, hname.format('Nconst', jetR, obs_label, suffix)).Fill(jet_pt, nconst_jet)
+                # getattr(self, hname.format('Nconst', jetR, obs_label, suffix)).Fill(jet_pt, nconst_jet)
         
             if 'jet_pairdist' in observable:
                 if  '_PM' in observable:
