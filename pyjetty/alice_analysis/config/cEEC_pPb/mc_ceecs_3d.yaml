@@ -1,0 +1,212 @@
+# Configuration for intermediary TTree processing into final analysis output objects
+
+targets: 
+  - E2C_T_det_jj
+  - E2C_T_gen_jj
+  - E2C_T_det_jp
+  - E2C_T_gen_jp
+  - E2C_T_det_pp
+  - E2C_T_gen_pp
+  - E2C_T_det_mx
+  - E2C_T_gen_mx
+  - E2C_P_det_jj
+  - E2C_P_gen_jj
+  - E2C_P_det_jp
+  - E2C_P_gen_jp
+  - E2C_P_det_pp
+  - E2C_P_gen_pp
+  - E2C_P_det_mx
+  - E2C_P_gen_mx
+  - E2C_M_det_jj
+  - E2C_M_gen_jj
+  - E2C_M_det_jp
+  - E2C_M_gen_jp
+  - E2C_M_det_pp
+  - E2C_M_gen_pp
+  - E2C_M_det_mx
+  - E2C_M_gen_mx
+  - E2C_PM_det_jj
+  - E2C_PM_gen_jj
+  - E2C_PM_det_jp
+  - E2C_PM_gen_jp
+  - E2C_PM_det_pp
+  - E2C_PM_gen_pp
+  - E2C_PM_det_mx
+  - E2C_PM_gen_mx
+  - jet_pt_det
+  - jet_pt_gen
+
+
+jetR: 0.4
+
+bins:
+  pT_bins: ['c', [5, 10, 20, 40, 60, 80, 100, 150]]
+  RL_bins: ['log', 0.008, 1, 10]
+  ew_bins: ['log', 3.0e-5, 1, 8]
+
+rules:
+  cEEC:
+    params:
+      ptcut:
+        - 1.0
+    dir:
+      - [f, pT1 > ptcut && pT2 > ptcut]
+    cEEC_det:
+      tree: pairs_det
+      jj:
+        dir:
+          - [f, id1 == 0 && id2 == 0]
+        E2C_T_det_jj:
+          dir:
+            - [h, 3, "det eec T;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjetsub]
+        E2C_P_det_jj:
+          dir:
+            - [f, q1 > 0 && q2 > 0]
+            - [h, 3, "det eec P;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjetsub]
+        E2C_M_det_jj:
+          dir:
+            - [f, q1 < 0 && q2 < 0]
+            - [h, 3, "det eec M;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjetsub]
+        E2C_PM_det_jj:
+          dir:
+            - [f, (q1 * q2) < 0]
+            - [h, 3, "det eec PM;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjetsub]
+      jp:
+        dir:
+          - [f, (id1 == 0 && id2 != 0) || (id1 != 0 && id2 == 0)]
+        E2C_T_det_jp:
+          dir:
+            - [h, 3, "det eec T;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjetsub]
+        E2C_P_det_jp:
+          dir:
+            - [f, q1 > 0 && q2 > 0]
+            - [h, 3, "det eec P;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjetsub]
+        E2C_M_det_jp:
+          dir:
+            - [f, q1 < 0 && q2 < 0]
+            - [h, 3, "det eec M;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjetsub]
+        E2C_PM_det_jp:
+          dir:
+            - [f, (q1 * q2) < 0]
+            - [h, 3, "det eec PM;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjetsub]
+      pp:
+        dir:
+          - [f, (id1 > 0 && id2 > 0) || (id1 < 0 && id2 < 0)]
+        E2C_T_det_pp:
+          dir:
+            - [h, 3, "det eec T;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjetsub]
+        E2C_P_det_pp:
+          dir:
+            - [f, q1 > 0 && q2 > 0]
+            - [h, 3, "det eec P;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjetsub]
+        E2C_M_det_pp:
+          dir:
+            - [f, q1 < 0 && q2 < 0]
+            - [h, 3, "det eec M;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjetsub]
+        E2C_PM_det_pp:
+          dir:
+            - [f, (q1 * q2) < 0]
+            - [h, 3, "det eec PM;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjetsub]
+      mx:
+        dir:
+          - [f, (id1 > 0 && id2 < 0) || (id1 < 0 && id2 > 0)]
+        E2C_T_det_mx:
+          dir:
+            - [h, 3, "det eec T;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjetsub]
+        E2C_P_det_mx:
+          dir:
+            - [f, q1 > 0 && q2 > 0]
+            - [h, 3, "det eec P;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjetsub]
+        E2C_M_det_mx:
+          dir:
+            - [f, q1 < 0 && q2 < 0]
+            - [h, 3, "det eec M;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjetsub]
+        E2C_PM_det_mx:
+          dir:
+            - [f, (q1 * q2) < 0]
+            - [h, 3, "det eec PM;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjetsub]
+    cEEC_gen:
+      tree: pairs_gen
+      jj:
+        dir:
+          - [f, id1 == 0 && id2 == 0]
+        E2C_T_gen_jj:
+          dir:
+            - [h, 3, "gen eec T;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjetsub]
+        E2C_P_gen_jj:
+          dir:
+            - [f, q1 > 0 && q2 > 0]
+            - [h, 3, "gen eec P;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjetsub]
+        E2C_M_gen_jj:
+          dir:
+            - [f, q1 < 0 && q2 < 0]
+            - [h, 3, "gen eec M;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjetsub]
+        E2C_PM_gen_jj:
+          dir:
+            - [f, (q1 * q2) < 0]
+            - [h, 3, "gen eec PM;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjetsub]
+      jp:
+        dir:
+          - [f, (id1 == 0 && id2 != 0) || (id1 != 0 && id2 == 0)]
+        E2C_T_gen_jp:
+          dir:
+            - [h, 3, "gen eec T;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjetsub]
+        E2C_P_gen_jp:
+          dir:
+            - [f, q1 > 0 && q2 > 0]
+            - [h, 3, "gen eec P;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjetsub]
+        E2C_M_gen_jp:
+          dir:
+            - [f, q1 < 0 && q2 < 0]
+            - [h, 3, "gen eec M;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjetsub]
+        E2C_PM_gen_jp:
+          dir:
+            - [f, (q1 * q2) < 0]
+            - [h, 3, "gen eec PM;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjetsub]
+      pp:
+        dir:
+          - [f, (id1 > 0 && id2 > 0) || (id1 < 0 && id2 < 0)]
+        E2C_T_gen_pp:
+          dir:
+            - [h, 3, "gen eec T;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjetsub]
+        E2C_P_gen_pp:
+          dir:
+            - [f, q1 > 0 && q2 > 0]
+            - [h, 3, "gen eec P;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjetsub]
+        E2C_M_gen_pp:
+          dir:
+            - [f, q1 < 0 && q2 < 0]
+            - [h, 3, "gen eec M;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjetsub]
+        E2C_PM_gen_pp:
+          dir:
+            - [f, (q1 * q2) < 0]
+            - [h, 3, "gen eec PM;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjetsub]
+      mx:
+        dir:
+          - [f, (id1 > 0 && id2 < 0) || (id1 < 0 && id2 > 0)]
+        E2C_T_gen_mx:
+          dir:
+            - [h, 3, "gen eec T;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjetsub]
+        E2C_P_gen_mx:
+          dir:
+            - [f, q1 > 0 && q2 > 0]
+            - [h, 3, "gen eec P;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjetsub]
+        E2C_M_gen_mx:
+          dir:
+            - [f, q1 < 0 && q2 < 0]
+            - [h, 3, "gen eec M;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjetsub]
+        E2C_PM_gen_mx:
+          dir:
+            - [f, (q1 * q2) < 0]
+            - [h, 3, "gen eec PM;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjetsub]
+  jetpt:
+    det:
+      tree: jets_det
+      jet_pt_det:
+        dir:
+          - [h, 1, det jet pt;jet pt;cts, pT_bins, pTsub]
+    gen:
+      tree: jets_gen
+      jet_pt_gen:
+        dir:
+          - [h, 1, gen jet pt;jet pt;cts, pT_bins, pTsub]

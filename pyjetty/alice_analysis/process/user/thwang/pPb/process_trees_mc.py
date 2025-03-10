@@ -148,6 +148,9 @@ class ProcessTree_ENC_MC:
                 self.sources.add(source)
             except utils.InvalidTargetError as e:
                 logger.warning(f"Invalid target '{obs}': {e.msg} Target skipped.")
+        logger.debug("Observable and recipe list: ---------------------------")
+        for histname, recipe in self.named_recipes.items():
+            logger.debug(f"Name: {histname} | Recipe: {recipe}")
         self.note_time("Completed observable parsing")
 
     def initialize_trees(self):

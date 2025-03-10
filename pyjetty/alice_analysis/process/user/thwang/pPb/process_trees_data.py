@@ -63,9 +63,6 @@ class ProcessTree_ENC_Data:
         self.output_dir = output_dir
         self.output_filename =  output_filename if output_filename is not None else "AnalysisResults.root"
 
-        # Create output dir
-        # if not self.output_dir.endswith("/"):
-        #     self.output_dir = self.output_dir + "/"
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir)
 
@@ -79,6 +76,8 @@ class ProcessTree_ENC_Data:
         self.jetR = config['jetR']
         self.bin_info = config['bins']
         self.rules = config['rules']
+
+    def note_time(self, msg): logger.info(f"{msg}: ---------- {perf_counter() - self.start_time:.3f} sec. ----------")
 
     # ---------------------------------------------------------------
     # Calculate phistar distance of two fastjet particles
@@ -108,8 +107,6 @@ class ProcessTree_ENC_Data:
             + pow(p2.pt(), 2)
             + 2 * p1.pt() * p2.pt() * np.cos(p1.phi() - p2.phi())
         )
-
-    def note_time(self, msg): logger.info(f"{msg}: ---------- {perf_counter() - self.start_time:.3f} sec. ----------")
 
     def process_data_trees(self):
         self.start_time = perf_counter()
@@ -150,7 +147,10 @@ class ProcessTree_ENC_Data:
                 self.valid_targets.append(obs)
                 self.sources.add(source)
             except utils.InvalidTargetError as e:
-                logger.warning(f"Invalid target '{obs}': {e.msg}")
+                logger.warning(f"Invalid target '{obs}': {e.msg} Target skipped.")
+        logger.debug("Observable and recipe list: ---------------------------")
+        for histname, recipe in self.named_recipes.items():
+            logger.debug(f"Name: {histname} | Recipe: {recipe}")
         self.note_time("Completed observable parsing")
 
     def initialize_trees(self):
@@ -189,7 +189,7 @@ class ProcessTree_ENC_Data:
         self.nbins = {}
         for name, params in self.bin_info.items():
             self.bins[name] = utils.calc_bins(params)
-            self.nbins[name] = params[-1]
+            self.nbins[name] = len(self.bins[name]) - 1
         self.note_time("Completed bin setup")
 
     def set_rules(self):
@@ -215,8 +215,13 @@ class ProcessTree_ENC_Data:
             elif args[0] == 2:
                 title, xbins, ybins, *remargs = args[1:]
                 return source.Histo2D((histname, title, self.nbins[xbins], self.bins[xbins], self.nbins[ybins], self.bins[ybins]), *remargs)
+            elif args[0] == 3:
+                title, xbins, ybins, zbins, *remargs = args[1:]
+                return source.Histo3D((histname, title, self.nbins[xbins], self.bins[xbins], self.nbins[ybins], self.bins[ybins], self.nbins[zbins], self.bins[zbins]), *remargs)
             else:
                 raise NotImplementedError(f"Histograms of dimension {args[0]} not implemented.")
+        else:
+            raise NotImplementedError(f"Directive class '{dirclass}' not recognized.")
 
     def save_histos(self):
         with ROOT.TFile(self.input_file, "READ") as infile:
