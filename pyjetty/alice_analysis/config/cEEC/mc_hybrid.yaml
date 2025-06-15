@@ -1,0 +1,71 @@
+# Configuration for intermediary TTree processing into final analysis output objects
+
+targets: 
+  - jet_det_pt
+  - jet_det_eta
+  - jet_det_phi
+  - jet_gen_pt
+  - jet_gen_eta
+  - jet_gen_phi
+  - part_det_pt
+  - part_det_eta
+  - part_det_phi
+  - part_gen_pt
+  - part_gen_eta
+  - part_gen_phi
+
+jetR: 0.4
+
+bins:
+  pT_part_bins: ['lin', 0, 200, 150]
+  pT_jet_bins: ['lin', 0, 200, 150]
+  phi_bins: ['lin', -1, 7, 100]
+  eta_bins: ['lin', -1.0, 1.0, 80]
+
+rules:
+  jetpt:
+    det:
+      tree: jets_det
+      jet_det_pt:
+        dir:
+          - [h, 1, det jet pt;jet pt;cts, pT_jet_bins, pT]
+      jet_det_phi:
+        dir:
+          - [h, 1, det jet pt;jet phi;cts, phi_bins, phi]
+      jet_det_eta:
+        dir:
+          - [h, 1, det jet pt;jet eta;cts, eta_bins, eta]
+    gen:
+      tree: jets_gen
+      jet_gen_pt:
+        dir:
+          - [h, 1, gen jet pt;jet pt;cts, pT_jet_bins, pT]
+      jet_gen_phi:
+        dir:
+          - [h, 1, gen jet pt;jet phi;cts, phi_bins, phi]
+      jet_gen_eta:
+        dir:
+          - [h, 1, gen jet pt;jet eta;cts, eta_bins, eta]
+  part:
+    gen:
+      tree: parts_gen
+      part_gen_pt:
+        dir:
+          - [h, 1, gen part pt;part pt;cts, pT_part_bins, pT]
+      part_gen_eta:
+        dir:
+          - [h, 1, gen part eta;part eta;cts, eta_bins, eta]
+      part_gen_phi:
+        dir:
+          - [h, 1, gen part phi;part phi;cts, phi_bins, phi]
+    det:
+      tree: parts_det
+      part_det_pt:
+        dir:
+          - [h, 1, det part pt;part pt;cts, pT_part_bins, pT]
+      part_det_eta:
+        dir:
+          - [h, 1, det part eta;part eta;cts, eta_bins, eta]
+      part_det_phi:
+        dir:
+          - [h, 1, det part phi;part phi;cts, phi_bins, phi]
