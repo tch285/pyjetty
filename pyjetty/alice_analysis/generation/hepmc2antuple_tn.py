@@ -30,6 +30,13 @@ class HepMC2antuple(hepmc2antuple_base.HepMC2antupleBase):
     print(f"Setting up split number {isplit}.")
     self.start_time = perf_counter()
 
+  def setup_output(self):
+    self.outdir = self.output
+    os.makedirs(self.outdir, exist_ok = True)
+    self.init_trees()
+    print("Setting up output directory.")
+    self.start_time = perf_counter()
+
   #---------------------------------------------------------------
   def main(self):
     if self.hepmc == 3:
@@ -41,20 +48,27 @@ class HepMC2antuple(hepmc2antuple_base.HepMC2antupleBase):
       print ("[error] unable to read from {}".format(self.input))
       sys.exit(1)
 
-    isplit = 1
-    self.setup_split(isplit)
+    if self.event_split != 0:
+      isplit = 1
+      self.setup_split(isplit)
 
-    for event in input_hepmc:
-      if self.ev_id % self.event_split == 0 and self.ev_id > 0:
-        self.save_trees()
-        print(f"Split {isplit} completed in {perf_counter() - self.start_time:.2f} s.")
-        isplit += 1
-        self.setup_split(isplit)
-      self.fill_event(event)
-      self.increment_event()
+      for event in input_hepmc:
+        if self.ev_id % self.event_split == 0 and self.ev_id > 0:
+          self.save_trees()
+          print(f"Split {isplit} completed in {perf_counter() - self.start_time:.2f} s.")
+          isplit += 1
+          self.setup_split(isplit)
+        self.fill_event(event)
+        self.increment_event()
+      self.save_trees()
+      print(f"Final split {isplit} completed in {perf_counter() - self.start_time:.2f} s.")
+    else:
+      self.setup_output()
+      for event in input_hepmc:
+        self.fill_event(event)
+        self.increment_event()
+      self.save_trees()
 
-    self.save_trees()
-    print(f"Final split {isplit} completed in {perf_counter() - self.start_time:.2f} s.")
     print("Conversion done!")
 
   #---------------------------------------------------------------
