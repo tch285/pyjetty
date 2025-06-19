@@ -19,6 +19,7 @@ import ROOT
 import yaml
 import array
 import math
+import logging
 # from array import *
 
 # Fastjet via python (from external library heppy)
@@ -36,7 +37,24 @@ from pyjetty.alice_analysis.process.user.substructure import process_mc_base
 # from pyjetty.alice_analysis.process.base import thermal_generator
 # from pyjetty.mputils.csubtractor import CEventSubtractor
 
-import logging
+class ColoredFormatter(logging.Formatter):
+    COLORS = {
+        'WARNING': '\033[33m',
+        'ERROR': '\033[31m',
+        'DEBUG': '\033[34m',
+        'INFO': '\033[32m',
+        'CRITICAL': '\033[35m'
+    }
+    RESET = '\033[0m'
+
+    def format(self, record):
+        color = self.COLORS.get(record.levelname, '')
+        if color:
+            # Color the entire line
+            formatted_msg = super().format(record)
+            return f"{color}{formatted_msg}{self.RESET}"
+        return super().format(record)
+
 logger = logging.getLogger(__name__)
 
 def linbins(xmin, xmax, nbins):
@@ -760,6 +778,18 @@ class ProcessMC_ENC(process_mc_base.ProcessMCBase):
             for part in parts_truth:
                 if part.python_info().particle_det is not None:
                     getattr(self, "h_track_pt_rsn").Fill(part.pt(), (part.python_info().particle_det.pt() - part.pt()) / part.pt())
+        p_obs_list = [obs for obs in self.observable_list if "p_rsn" in obs]
+        if len(p_obs_list) > 0:
+            for part in parts_truth:
+                if part.python_info().particle_det is not None:
+                    p_det_p = part.python_info().particle_det.modp()
+                    ch_truth = part.python_info().charge
+                    if ch_truth > 0:
+                        label = "P"
+                    else:
+                        label = "M"
+                    getattr(self,   "h_p_rsn_T").Fill(part.modp(), (p_det_p - part.modp()) / part.modp())
+                    getattr(self,  f"h_p_rsn_{label}").Fill(part.modp(), (p_det_p - part.modp()) / part.modp())
 
         obs_list = [obs for obs in self.observable_list if "track_pairdist" in obs]
         if len(obs_list) != 0:
@@ -1546,8 +1576,7 @@ if __name__ == '__main__':
     handler = logging.StreamHandler()
 
     # Create a formatter and set it for the handler
-    formatter = logging.Formatter('%(asctime)s - %(filename)s:%(lineno)d - %(levelname)s - %(funcName)s - %(message)s')
-    handler.setFormatter(formatter)
+    handler.setFormatter(ColoredFormatter('%(asctime)s - %(filename)s:%(lineno)d - %(levelname)s - %(funcName)s - %(message)s'))
     handler.setLevel(logging.INFO)
     logger.addHandler(handler)
     logger.setLevel(logging.DEBUG)

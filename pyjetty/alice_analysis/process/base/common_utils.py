@@ -67,7 +67,7 @@ class CommonUtils(common_base.CommonBase):
       return [obs_config_dict[name]['trk_thrd'] for name in obs_subconfig_list]
     elif observable in ['track_pairdist_T', 'track_pairdist_M', 'track_pairdist_P', 'track_pairdist_PM']:
       return [obs_config_dict[name]['trk_thrd'] for name in obs_subconfig_list]
-    elif observable in ['track_eff_pt', 'track_pt_rsn', 'track_creco_P_pt', 'track_creco_M_pt']:
+    elif observable in ['track_eff_pt', 'track_pt_rsn', 'track_creco_P_pt', 'track_creco_M_pt', 'p_rsn_P', 'p_rsn_M', 'p_rsn_T']:
       return [obs_config_dict[name]['trk_thrd'] for name in obs_subconfig_list]
     elif observable in ['pair_eff_P', 'pair_eff_M', 'pair_eff_PM', 'pair_eff_T']:
       return [obs_config_dict[name]['trk_thrd'] for name in obs_subconfig_list]

@@ -387,6 +387,12 @@ class ProcessMCBase(process_base.ProcessBase):
                 h.GetXaxis().SetTitle('p_{T}')
                 h.GetYaxis().SetTitle('p_{T} resolution')
                 setattr(self, name, h)
+            if 'p_rsn' in observable:
+                name = f'h_{observable}'
+                h = ROOT.TH2D(name, name, self.trk_pt_nbins, self.trk_pt_bins, self.rsn_nbins, self.rsn_bins)
+                h.GetXaxis().SetTitle('p_{T}')
+                h.GetYaxis().SetTitle('p_{T} resolution')
+                setattr(self, name, h)
 
             if "track_pairdist" in observable:
                 xaxis = "PairKt"
