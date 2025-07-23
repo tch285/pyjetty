@@ -1,0 +1,24 @@
+# Configuration for intermediary TTree processing into final analysis output objects
+
+targets: 
+  - rho
+  - rhop
+
+jetR: 0.4
+
+bins:
+  rho_bins: ['log', 0.1, 10, 500]
+  rhop_bins: ['log', 0.01, 10, 500]
+
+# - [d, dalpha, q1*asin(0.15*0.5*1.1/pT1) - q2*asin(0.15*0.5*1.1/pT2)]
+# - [d, dalpha, q1*asin(0.15*0.5*1.1/pT1) - q2*asin(0.15*0.5*1.1/pT2)]
+
+rules:
+  tree: events
+  rho:
+    dir:
+      - [h, 1, event rho density;#rho (GeV/area);cts, rho_bins, rho]
+  rhop:
+    dir:
+      - [d, rp, rho * areaC]
+      - [h, 1, event rho' density;#rho' (GeV/area);cts, rhop_bins, rp]
