@@ -277,7 +277,15 @@ class ProcessMC_ENC(process_mc_base_pPb.ProcessMCBase):
                             # h.GetXaxis().SetTitle('p_{T,ch jet}')
                             # h.GetYaxis().SetTitle('p_{T,ch jet}R_{L}') # NB: y axis scaled by jet pt (applied jet by jet)
                             # setattr(self, name, h)
-
+                if 'track_creco' in observable:
+                        name = f'h_{observable}'
+                        h = ROOT.TH1D(name, name, self.trk_pt_nbins, self.trk_pt_bins)
+                        h.GetXaxis().SetTitle('p_{T}')
+                        setattr(self, name, h)
+                        name = f'h_{observable}_Truth'
+                        h = ROOT.TH1D(name, name, self.trk_pt_nbins, self.trk_pt_bins)
+                        h.GetXaxis().SetTitle('p_{T}')
+                        setattr(self, name, h)
                 #             # Matched det histograms
                 #             name = 'h_matched_{}{}{}_JetPt_R{}_{}'.format(observable, ipoint, pair_type_label, jetR, obs_label)
                 #             pt_bins = linbins(0,200,200)
@@ -1091,6 +1099,23 @@ class ProcessMC_ENC(process_mc_base_pPb.ProcessMCBase):
         return pairs
     
     def fill_efficiency_histograms(self, parts_det, parts_truth):
+        obs_list = [obs for obs in self.observable_list if "track_creco" in obs]
+        if len(obs_list) != 0:
+            reco_truth = [part for part in parts_truth if part.python_info().particle_det is not None]
+            for part_truth in reco_truth:
+                part_det = part_truth.python_info().particle_det
+                ch_truth = part_truth.python_info().charge
+                ch_det = part_det.python_info().charge
+                if ch_truth > 0:
+                    label = "P"
+                else:
+                    label = "M"
+                getattr(self, f"h_track_creco_{label}_pt_Truth").Fill(part_truth.pt())
+                if ch_truth * ch_det > 0:
+                    getattr(self, f"h_track_creco_{label}_pt").Fill(part_truth.pt())
+                else:
+                    logger.warning("Mischarged particle found!")
+
         obs_list = [obs for obs in self.observable_list if "track_pairdist" in obs]
         if len(obs_list) != 0:
             hname = 'h_track_pairdist_{}_{}_PairKt{}'

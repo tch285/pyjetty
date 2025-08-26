@@ -1,0 +1,67 @@
+# Configuration for:
+#   (a) Processing of ROOT trees into histograms
+#   (b) Analysis of histograms into final result
+#
+# The observables are structured into observable blocks (e.g. theta_g, subjet_z, etc.)
+# each containing multiple individual subconfigurations (e.g. zcut, beta, subjetR, etc.),
+# where each subconfiguration corresponds to a single unfolded result.
+# One can also specify a list of jetR, which will be looped over.
+#
+# The process step is intended to loop over all observables simultaneously
+# The analysis step is intended to run for a single observable block
+
+# process_observables: ['jet_ENC_RL', 'jet_pt', 'jet_E2C_T_RL', 'jet_E2C_Q_RL', 'jet_E3C_T_RL', 'jet_E3C_Q_RL', 'jet_E2C_P_RL', 'jet_E2C_M_RL', 'jet_E2C_PM_RL']
+# process_observables: ['jet_pt', 'jet_E2C_T_RL', 'jet_E2C_Q_RL', 'jet_E2C_P_RL', 'jet_E2C_M_RL', 'jet_E2C_PM_RL']
+process_observables: ['track_creco_P_pt', 'track_creco_M_pt']
+jetR: [0.4]
+jet_matching_distance: 0.6        # Match jets with deltaR < jet_matching_distance*jetR
+reject_tracks_fraction: 0
+eta_max: 0.9
+debug_level: 0
+dry_run: False
+fast_simulation: False
+ENC_fastsim: False # only set to True when fast_simulation is set to True
+ENC_pair_cut: False
+
+do_track_mc_matching: True
+fill_match_hists: True
+
+# new additions by Tucker
+RL_binning: [1.0E-3, 1, 30] # the period is important as otherwise PyYAML will read it as a string
+pT_binning: [0, 200, 200]
+pTRL_binning: [1.0E-3, 1.0E+2, 60]
+kT_binning: [0, 10, 100]
+pairdist_binning: [-0.2, 0.2, 200]
+pt_rsn_binning: [-0.1, 0.1, 100]
+trk_pt_binning: [0.15, 5, 200]
+
+# Observable block
+track_creco_P_pt:
+  common_settings:
+    xtitle: '#it{R_{L}}'
+  config2:
+    trk_thrd: 0.001
+    
+track_creco_M_pt:
+  common_settings:
+    xtitle: '#it{R_{L}}'
+  config2:
+    trk_thrd: 0.001
+
+jet_pair_creco_P:
+  common_settings:
+    xtitle: '#it{R_{L}}'
+  config2:
+    trk_thrd: 0.001
+    
+jet_pair_creco_M:
+  common_settings:
+    xtitle: '#it{R_{L}}'
+  config2:
+    trk_thrd: 0.001
+
+jet_pair_creco_PM:
+  common_settings:
+    xtitle: '#it{R_{L}}'
+  config2:
+    trk_thrd: 0.001

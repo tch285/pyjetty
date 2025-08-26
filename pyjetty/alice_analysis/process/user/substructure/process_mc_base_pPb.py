@@ -160,10 +160,13 @@ class ProcessMCBase(process_base.ProcessBase):
             self.mc_fraction_threshold = config['mc_fraction_threshold']
         if 'do_median_subtraction' in config:
             self.do_median_subtraction = config['do_median_subtraction']
+        else:
+            self.do_median_subtraction = False
+
         self.do_track_mc_matching = config['do_track_mc_matching'] if 'do_track_mc_matching' in config else False
         self.strict_mc_match = config['strict_mc_match'] if 'strict_mc_match' in config else False
         
-        self.do_perpendicular_cone = config['do_perpendicular_cone']
+        self.do_perpendicular_cone = config['do_perpendicular_cone'] if 'do_perpendicular_cone' in config else False
         self.randomize_cone = config['randomize_cone'] if 'randomize_cone' in config else False
         if self.do_constituent_subtraction:
             self.is_pp = False
@@ -209,7 +212,9 @@ class ProcessMCBase(process_base.ProcessBase):
         if 'pTRL_binning' in config.keys():
             self.pTRL_min, self.pTRL_max, self.pTRL_nbins = config["pTRL_binning"]
             self.pTRL_bins = logbins(self.pTRL_min,self.pTRL_max,self.pTRL_nbins)
-
+        if "trk_pt_binning" in config.keys():
+            self.trk_pt_min, self.trk_pt_max, self.trk_pt_nbins = config["trk_pt_binning"]
+            self.trk_pt_bins = logbins(self.trk_pt_min,self.trk_pt_max,self.trk_pt_nbins)
         if "kT_binning" in config.keys():
             self.kT_min, self.kT_max, self.kT_nbins = config["kT_binning"]
             self.kT_bins = linbins(self.kT_min,self.kT_max,self.kT_nbins)
