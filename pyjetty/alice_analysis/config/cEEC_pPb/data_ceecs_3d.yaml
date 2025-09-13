@@ -22,9 +22,12 @@ targets:
 jetR: 0.4
 
 bins:
-  pT_bins: ['c', [5, 10, 20, 40, 60, 80, 100, 150]]
-  RL_bins: ['log', 0.008, 1, 10]
-  ew_bins: ['log', 3.0e-5, 1, 8]
+  # pT_bins: ['c', [5, 10, 20, 40, 60, 80, 100, 150]]
+  # RL_bins: ['log', 0.008, 1, 10]
+  # ew_bins: ['log', 3.0e-5, 1, 8]
+  pT_bins: ['c', [5, 20, 40, 60, 80, 150]]
+  RL_bins: ['log', 0.008, 1, 7]
+  ew_bins: ['log', 1.0e-4, 1, 7]
 
 rules:
   cEEC:
