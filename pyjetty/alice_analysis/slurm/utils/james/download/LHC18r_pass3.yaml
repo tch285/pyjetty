@@ -1,0 +1,19 @@
+# Configuration to download LHC18b8 data
+# (to be used by download_data.py)
+
+period: 'LHC18q'
+parent_dir: 'data'
+year: '2018'
+train_name: 'HF_TreeCreator'
+train_PWG: 'PWGHF'
+train_tag: '822_20250911-2150'
+
+train_output: '/alice/data/2018/LHC18r/{run:09d}/pass3/AOD252/PWGHF/HF_TreeCreator/822_20250911-2150_child_2'
+
+params:
+  # runs for 18q
+  # run:  [295673, 295754, 296065, 296068, 296133, 296191, 296377, 296379, 296423, 296433, 296472, 296510, 296550, 296551]
+  # runs for 18r
+  run: [297446, 297544, 297415, 297479, 297441, 296794, 297129, 297118, 296690, 296894, 297031, 296941, 297085, 297372]
+
+output_dir: '/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/data/LHC18qr_pass3/822'
