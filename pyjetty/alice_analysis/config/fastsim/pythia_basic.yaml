@@ -1,0 +1,5 @@
+# detector effects
+eta_acc: [-0.9, 0.9]
+tracking_eff: 0.7
+pT_resolution: 0.03
+trk_pT_min: 0.15

@@ -1,0 +1,27 @@
+### processing
+Next:numberCount = 0
+Next:numberShowEvent = 0
+Next:numberShowInfo = 0
+Next:numberShowProcess = 0
+Stat:showProcessLevel = on
+
+# 2 -> 2 jet production, oversampling by pThat^4
+
+### beams
+Beams:idA = 2212	# proton
+Beams:idB = 2212 	# proton
+Beams:eCM = 5020. 	# GeV
+
+### processes
+SoftQCD:inelastic = off
+HardQCD:all = on
+
+### decays, removing for now
+## ParticleDecays:limitTau0 = on
+## ParticleDecays:tau0Max = 10.
+
+### phase space cuts
+PhaseSpace:pTHatMin = 5
+PhaseSpace:pTHatMax = 600
+PhaseSpace:bias2Selection = on
+PhaseSpace:bias2SelectionPow = 4
