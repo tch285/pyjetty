@@ -23,7 +23,8 @@ ENC_pair_cut: False
 use_ev_id_ext: False
 
 # new additions by Tucker
-RL_binning: [1.0E-3, 1, 30] # the period is important as otherwise PyYAML will read it as a string
+# RL_binning: [1.0E-3, 1, 30] # the period is important as otherwise PyYAML will read it as a string
+RL_binning: [1.0E-2, 0.4, 20] # the period is important as otherwise PyYAML will read it as a string
 pT_binning: [0, 200, 200]
 pTRL_binning: [1.0E-3, 1.0E+2, 60]
 

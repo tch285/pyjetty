@@ -26,7 +26,8 @@ jetR: 0.4
 
 bins:
   pT_bins: ['lin', 0, 200, 200]
-  RL_bins: ['log', 1.0e-3, 1, 30]
+  RL_bins: ['log', 1.0e-2, 0.4, 20]
+  # RL_bins: ['log', 1.0e-3, 1, 30]
   # rsn_part_bins: ['lin', -0.1, 0.1, 100]
   # pT_part_bins: ['log', 0.15, 5, 200]
 

@@ -9,8 +9,10 @@ jetR: 0.4
 
 bins:
   pT_bins: ['c', [5, 10, 20, 40, 60, 80, 100, 150]]
-  RL_bins: ['log', 1.0e-3, 1, 30]
-  ew_bins: ['log', 1.0e-5, 1, 20]
+  # RL_bins: ['log', 1.0e-3, 1, 30]
+  RL_bins: ['log', 1.0e-2, 0.4, 20]
+  # ew_bins: ['log', 1.0e-5, 1, 20]
+  ew_bins: ['log', 1.0e-5, 1, 16]
 
 rules:
   cEEC:
