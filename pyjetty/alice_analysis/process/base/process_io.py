@@ -357,18 +357,18 @@ class ProcessIO(common_base.CommonBase):
 
       if self.is_ENC:
         df_fjparticles_orig = track_df_grouped.apply(
-        self.get_fjparticles, m=m, offset_indices=offset_indices, random_mass=random_mass, min_pt=min_pt)
+        self.get_fjparticles, include_groups = False, m=m, offset_indices=offset_indices, random_mass=random_mass, min_pt=min_pt)
         if self.is_det_level:
           df_fjparticles_aux = track_df_grouped.apply(
-          self.get_particles_mc_index, m=m, offset_indices=offset_indices, random_mass=random_mass, min_pt=min_pt)
+          self.get_particles_mc_index, include_groups = False, m=m, offset_indices=offset_indices, random_mass=random_mass, min_pt=min_pt)
           df_fjparticles = pandas.DataFrame({"fj_particle": df_fjparticles_orig, "ParticleMCIndex": df_fjparticles_aux})
         else:
           df_fjparticles_aux = track_df_grouped.apply(
-          self.get_particles_pid, m=m, offset_indices=offset_indices, random_mass=random_mass, min_pt=min_pt)
+          self.get_particles_pid, include_groups = False, m=m, offset_indices=offset_indices, random_mass=random_mass, min_pt=min_pt)
           df_fjparticles = pandas.DataFrame({"fj_particle": df_fjparticles_orig, "ParticlePID": df_fjparticles_aux})
       else:
         df_fjparticles = track_df_grouped.apply(
-        self.get_fjparticles, m=m, offset_indices=offset_indices, random_mass=random_mass, min_pt=min_pt)
+        self.get_fjparticles, include_groups = False, m=m, offset_indices=offset_indices, random_mass=random_mass, min_pt=min_pt)
       
       logger.debug(f'Combined:\n{df_fjparticles}')
       
