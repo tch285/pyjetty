@@ -30,7 +30,7 @@ apply_track_pT_cut: True
 # weight_binning: [1.0e-5, 1, 20]
 weight_binning: [1.0e-4, 1, 7]
 # RL_binning: [0.005, 1, 22]
-RL_binning: [0.008, 1, 7]
+RL_binning: [0.01, 0.4, 7]
 # RL_binning: [1.0e-3, 1, 30]
 pT_truth_bins: [5., 20., 40., 60., 80., 150.]
 pT_det_bins: [5., 20., 40., 60., 80., 150.]
