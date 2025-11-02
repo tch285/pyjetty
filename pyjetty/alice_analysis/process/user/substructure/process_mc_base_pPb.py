@@ -828,7 +828,8 @@ class ProcessMCBase(process_base.ProcessBase):
 
                     jetR_for_rot = self.jetR_list[0]
                     jet_def_for_rot = fj.JetDefinition(fj.antikt_algorithm, jetR_for_rot)
-                    jet_selector_det_for_rot = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9 - jetR_for_rot)
+                    # jet_selector_det_for_rot = fj.SelectorPtMin(5.0) & fj.SelectorAbsRapMax(0.9 - jetR_for_rot)
+                    jet_selector_det_for_rot = fj.SelectorPtMin(5.0) & fj.SelectorAbsEtaMax(0.9 - jetR_for_rot)
                     cs_det_for_rot = fj.ClusterSequence(fj_particles_det, jet_def_for_rot)
                     jets_det_pp_for_rot = fj.sorted_by_pt(cs_det_for_rot.inclusive_jets())
                     if jet_selector_det_for_rot(jets_det_pp_for_rot):

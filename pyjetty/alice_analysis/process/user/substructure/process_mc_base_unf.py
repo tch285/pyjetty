@@ -631,8 +631,10 @@ class ProcessMCBase(process_base.ProcessBase):
 
         # Set jet definition and a jet selector
         jet_def = fj.JetDefinition(fj.antikt_algorithm, jetR)
-        jet_selector_det = fj.SelectorPtMin(self.jetpt_min_det) & fj.SelectorAbsRapMax(0.9 - jetR)
-        jet_selector_truth = fj.SelectorPtMin(self.jetpt_min_truth) & fj.SelectorAbsRapMax(0.9)
+        # jet_selector_det = fj.SelectorPtMin(self.jetpt_min_det) & fj.SelectorAbsRapMax(0.9 - jetR)
+        jet_selector_det = fj.SelectorPtMin(self.jetpt_min_det) & fj.SelectorAbsEtaMax(0.9 - jetR)
+        # jet_selector_truth = fj.SelectorPtMin(self.jetpt_min_truth) & fj.SelectorAbsRapMax(0.9)
+        jet_selector_truth = fj.SelectorPtMin(self.jetpt_min_truth) & fj.SelectorAbsEtaMax(0.9)
 
         if self.debug_level > 2:
             logger.debug('jet definition is:', jet_def)
