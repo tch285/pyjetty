@@ -53,6 +53,8 @@ handler.setFormatter(ColoredFormatter('%(asctime)s - %(filename)s:%(lineno)d - %
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
+ROOT.TH1.SetDefaultSumw2(True)
+
 ################################################################
 class ProcessBase(common_base.CommonBase):
 
