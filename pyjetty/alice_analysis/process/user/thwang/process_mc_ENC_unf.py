@@ -345,6 +345,8 @@ class ProcessMC_ENC(process_mc_base_unf.ProcessMCBase):
     EEC_indices2 = EEC_cb.indices2() # contains list of 2nd track in the pair
 
     for idx1, idx2, rL, weight in zip(EEC_indices1, EEC_indices2, EEC_rs, EEC_weights):
+      if idx1 == idx2:
+        continue
       p1 = _v[idx1]
       p2 = _v[idx2]
       mcid1 = np.abs(_v[idx1].python_info().mcid)

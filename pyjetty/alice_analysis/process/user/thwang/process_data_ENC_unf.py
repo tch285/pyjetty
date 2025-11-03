@@ -132,6 +132,8 @@ class ProcessData_ENC(process_data_base_unf.ProcessDataBase):
     EEC_cb = cb.correlator(ipoint)
 
     for indices, RL, weight in zip(EEC_cb.indices(), EEC_cb.rs(), EEC_cb.weights()):
+      if indices[0] == indices[1]:
+        continue
       getattr(self, "raw").Fill(weight, RL, jet_pt)
       getattr(self, "raw_eec").Fill(RL, jet_pt, weight)
 

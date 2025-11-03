@@ -148,7 +148,9 @@ class ProcessData_ENC(process_data_base_pPb.ProcessDataBase):
     correl = ecorrel.CorrelatorBuilder(c_select, jet_pt_sub, ipoint, 1, -9999, -9999)
     corr = correl.correlator(ipoint)
     for indices, RL, weight in zip(corr.indices(), corr.rs(), corr.weights()):
-      # print(indices, RL, weight, jet_pt_sub)
+      # with perp cone on, this does the jet-jet and jet-perp1 and perp1-perp1
+      if indices[0] == indices[1]:
+        continue
       uidx1, uidx2 = [c_select[idx].user_index() for idx in indices]
       ptype_f = self.get_pair_type_factor(uidx1, uidx2)
       q1, q2 = [c_select[idx].python_info().charge for idx in indices]
@@ -163,6 +165,9 @@ class ProcessData_ENC(process_data_base_pPb.ProcessDataBase):
       correl2 = ecorrel.CorrelatorBuilder(c_select2, jet_pt_sub, ipoint, 1, -9999, -9999)
       corr2 = correl2.correlator(ipoint)
       for indices, RL, weight in zip(corr2.indices(), corr2.rs(), corr2.weights()):
+        # with perp cone on, this does the jet-perp2 and perp2-perp2 but ignores jet-jet
+        if indices[0] == indices[1]:
+          continue
         uidx1, uidx2 = [c_select2[idx].user_index() for idx in indices]
         ptype_f = self.get_pair_type_factor(uidx1, uidx2)
         if ptype_f == 1:
@@ -179,12 +184,15 @@ class ProcessData_ENC(process_data_base_pPb.ProcessDataBase):
       cone2_w_ptcut = [p for p in jet.python_info().perpcone2 if p.pt() > self.thrd]
       for p1 in cone1_w_ptcut:
         for p2 in cone2_w_ptcut:
+          # with perp cone on, this does the mixed-cone
           pair_weight = p1.pt() * p2.pt() / (jet_pt_sub ** 2)
           pair_RL = np.sqrt((p1.eta() - p2.eta()) ** 2 + (p1.delta_phi_to(p2)) ** 2)
           q1 = p1.python_info().charge
           q2 = p2.python_info().charge
           ctype = self.get_charge_type(q1, q2)
-          # pair type factor is +1 for mixed cone
+          # pair type factor is +1 for mixed cone, not half since
+          # mixed cone cancels the bg in jp for one cone, not two
+          # the way we have it now, we have half of the jp from each cone
           getattr(self,  "raw_T").Fill(pair_weight, pair_RL, jet_pt_sub)
           getattr(self,  "raw_eec_T").Fill(pair_RL, jet_pt_sub, pair_weight)
           getattr(self, f"raw_{ctype}").Fill(pair_weight, pair_RL, jet_pt_sub)
@@ -198,7 +206,7 @@ class ProcessData_ENC(process_data_base_pPb.ProcessDataBase):
   def get_charge_type(self, q1, q2):
     if q1 > 0 and q2 > 0:
       return 'P'
-    elif q1 * q2 == -1:
+    elif q1 * q2 < 0:
       return 'PM'
     else:
       return 'M'
@@ -215,8 +223,11 @@ class ProcessData_ENC(process_data_base_pPb.ProcessDataBase):
     # jet parts have uidx 0, cone1 (+angle) has uidx +1, cone2 (-angle) has uidx -1
     if uidx1 == 0 and uidx2 == 0: # jet-jet
       return 1
-    else: # jet-perp and perp-perp
-      return -1
+    else:
+      # jet-perp and perp-perp, half because we use both cones
+      # ss = jj-jp-pp+mx is valid when jp and pp is only done with a single cone
+      # mx already takes this into account so no need for 0.5
+      return -0.5
     # mixed cone not checked here, but would be +1 factor
 
 ##################################################################

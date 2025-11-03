@@ -450,6 +450,9 @@ class ProcessMC_ENC(process_mc_base_pPb.ProcessMCBase):
     EEC_cb = cb.correlator(ipoint)
 
     for indices, rL, weight in zip(EEC_cb.indices(), EEC_cb.rs(), EEC_cb.weights()):
+      # does jet-jet, jet-perp1, and perp1-perp1
+      if indices[0] == indices[1]:
+        continue
       p1, p2 = [c_select[idx] for idx in indices]
       mcid1, mcid2 = [np.abs(c_select[idx].python_info().mcid) for idx in indices]
 
@@ -467,6 +470,9 @@ class ProcessMC_ENC(process_mc_base_pPb.ProcessMCBase):
     cb2 = ecorrel.CorrelatorBuilder(c_select2, jet_pt_sub, max_npoint, weight_power, -9999, -9999)
     EEC_cb2 = cb2.correlator(ipoint)
     for indices, rL, weight in zip(EEC_cb2.indices(), EEC_cb2.rs(), EEC_cb2.weights()):
+      # does jet-perp2, and perp2-perp2 but ignores jet-jet
+      if indices[0] == indices[1]:
+        continue
       p1, p2 = [c_select2[idx] for idx in indices]
       mcid1, mcid2 = [np.abs(c_select2[idx].python_info().mcid) for idx in indices]
 
@@ -508,7 +514,7 @@ class ProcessMC_ENC(process_mc_base_pPb.ProcessMCBase):
   def get_charge_type(self, q1, q2):
     if q1 > 0 and q2 > 0:
       return 'P'
-    elif q1 * q2 == -1:
+    elif q1 * q2 < 0:
       return 'PM'
     else:
       return 'M'
@@ -526,7 +532,9 @@ class ProcessMC_ENC(process_mc_base_pPb.ProcessMCBase):
     if ptype == 'jj' or ptype == 'mx':
       return 1
     else:
-      return -1
+      # return -1
+      # same reasoning as before: jp and pp need to be halved since we use both cones
+      return -0.5
 
 
 ##################################################################
