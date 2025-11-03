@@ -1,0 +1,62 @@
+targets: 
+  - raw
+  - raw_PP
+  - raw_MM
+  - raw_PM
+  - raw_eec
+  - raw_eec_PP
+  - raw_eec_MM
+  - raw_eec_PM
+  - raw1D
+
+jetR: 0.4
+
+bins:
+  pT_bins: ['c', [10.0, 20., 40., 60., 80., 100., 150.]]
+  # RL_bins: ['log', 1.0e-3, 1, 30]
+  RL_bins: ['log', 1.0e-2, 0.4, 20]
+  # ew_bins: ['log', 1.0e-5, 1, 20]
+  ew_bins: ['log', 1.0e-5, 1, 16]
+
+rules:
+  cEEC:
+    dir:
+      - [f, pT1 > 1.0 && pT2 > 1.0]
+    cEEC:
+      tree: pairs
+      raw:
+        dir:
+          - [h, 3, "eec T;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjet]
+      raw_PP:
+        dir:
+          - [f, q1 > 0 && q2 > 0]
+          - [h, 3, "eec P;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjet]
+      raw_MM:
+        dir:
+          - [f, q1 < 0 && q2 < 0]
+          - [h, 3, "eec M;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjet]
+      raw_PM:
+        dir:
+          - [f, (q1 * q2) < 0]
+          - [h, 3, "eec PM;ew;R_{L};jet pt", ew_bins, RL_bins, pT_bins, weight, RL, pTjet]
+      raw_eec:
+        dir:
+          - [h, 2, "eec T;R_{L};jet pt", RL_bins, pT_bins, RL, pTjet, weight]
+      raw_eec_PP:
+        dir:
+          - [f, q1 > 0 && q2 > 0]
+          - [h, 2, "eec P;R_{L};jet pt", RL_bins, pT_bins, RL, pTjet, weight]
+      raw_eec_MM:
+        dir:
+          - [f, q1 < 0 && q2 < 0]
+          - [h, 2, "eec M;R_{L};jet pt", RL_bins, pT_bins, RL, pTjet, weight]
+      raw_eec_PM:
+        dir:
+          - [f, (q1 * q2) < 0]
+          - [h, 2, "eec PM;R_{L};jet pt", RL_bins, pT_bins, RL, pTjet, weight]
+  jetpt:
+    det:
+      tree: jets
+      raw1D:
+        dir:
+          - [h, 1, det jet pt;jet pt;cts, pT_bins, pT]
