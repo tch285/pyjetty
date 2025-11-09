@@ -228,7 +228,7 @@ class ProcessMC_ENC(process_mc_base_pPb.ProcessMCBase):
         self.pair_type_labels = ['']
         if self.do_perpendicular_cone:
         # if self.do_median_subtraction and not self.do_feedin_check:
-            self.pair_type_labels = ['_jj','_jp','_pp']
+            self.pair_type_labels = ['_jj','_jp','_pp', '_mx']
         
         for observable in self.observable_list:
 
@@ -829,6 +829,8 @@ class ProcessMC_ENC(process_mc_base_pPb.ProcessMCBase):
                 #     weights_pair = self.get_pair_eff_weights(new_corr, ipoint, c_select)
                 for indices, RL, weight in zip(corr.correlator(ipoint).indices(), corr.correlator(ipoint).rs(), corr.correlator(ipoint).weights()):
                     idx1, idx2 = indices
+                    if idx1 == idx2:
+                        continue
                     uidx1 = c_select[idx1].user_index()
                     uidx2 = c_select[idx2].user_index()
                     pair_type = self.get_pair_type(uidx1, uidx2)
@@ -843,6 +845,8 @@ class ProcessMC_ENC(process_mc_base_pPb.ProcessMCBase):
                     corr2 = ecorrel.CorrelatorBuilder(c_select2, jet_pt, ipoint, 1, dphi_cut, deta_cut)
                     for indices, RL, weight in zip(corr2.correlator(ipoint).indices(), corr2.correlator(ipoint).rs(), corr2.correlator(ipoint).weights()):
                         idx1, idx2 = indices
+                        if idx1 == idx2:
+                            continue
                         uidx1 = c_select2[idx1].user_index()
                         uidx2 = c_select2[idx2].user_index()
                         pair_type = self.get_pair_type(uidx1, uidx2)
@@ -855,6 +859,26 @@ class ProcessMC_ENC(process_mc_base_pPb.ProcessMCBase):
                         getattr(self, hname.format(observable+"_T"+pair_type, obs_label)).Fill(jet_pt, RL, weight)
                         getattr(self, hname.format(observable+"_Q"+pair_type, obs_label)).Fill(jet_pt, RL, weight*q1*q2)
                         # getattr(self, hname.format(observable+pair_type, obs_label)).Fill(jet_pt, RL, weight)
+                    # with perp cone on, this does the mixed-cone
+                    cone1_w_ptcut = [p for p in jet.python_info().perpcone1 if p.pt() > trk_thrd]
+                    cone2_w_ptcut = [p for p in jet.python_info().perpcone2 if p.pt() > trk_thrd]
+                    for p1 in cone1_w_ptcut:
+                        for p2 in cone2_w_ptcut:
+                            pair_weight = p1.pt() * p2.pt() / (jet_pt ** 2)
+                            pair_RL = np.sqrt((p1.eta() - p2.eta()) ** 2 + (p1.delta_phi_to(p2)) ** 2)
+                            q1 = p1.python_info().charge
+                            q2 = p2.python_info().charge
+                            charge_type = self.get_charge_type(q1, q2)
+                            # pair type factor is +1 for mixed cone, not half since
+                            # mixed cone cancels the bg in jp for one cone, not two
+                            # the way we have it now, we have half of the jp from each cone
+                            getattr(self, hname.format(observable+charge_type+"_mx", obs_label)).Fill(jet_pt, pair_RL, pair_weight)
+                            getattr(self, hname.format(observable+"_T"+"_mx", obs_label)).Fill(jet_pt, pair_RL, pair_weight)
+                            getattr(self, hname.format(observable+"_Q"+"_mx", obs_label)).Fill(jet_pt, pair_RL, pair_weight*q1*q2)
+                            # we fill twice to get the reverse pair order as well
+                            getattr(self, hname.format(observable+charge_type+"_mx", obs_label)).Fill(jet_pt, pair_RL, pair_weight)
+                            getattr(self, hname.format(observable+"_T"+"_mx", obs_label)).Fill(jet_pt, pair_RL, pair_weight)
+                            getattr(self, hname.format(observable+"_Q"+"_mx", obs_label)).Fill(jet_pt, pair_RL, pair_weight*q1*q2)
 
             if 'jet_pt' in observable:
                 getattr(self, hname.format(observable,obs_label)).Fill(jet_pt)
