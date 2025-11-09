@@ -127,6 +127,13 @@ class ProcessMC_ENC(process_mc_base_pPb.ProcessMCBase):
       self.pt_hat_bin = 0
       self.pt_hat = 1
       logger.info("No pT hat weight, using unity weight.")
+    elif "LHC24c1" in input_file:
+      self.pt_hat_bin = int(input_file.split('/')[len(input_file.split('/'))-4]) # depends on exact format of input_file name
+      with open("/global/cfs/cdirs/alice/alicepro/hiccup/rstorage/alice/data/LHC24c1/scaleFactors_temp.yaml", 'r') as stream:
+        pt_hat_yaml = yaml.safe_load(stream)
+      self.pt_hat = pt_hat_yaml[self.pt_hat_bin]
+      logger.info(f"pt hat bin: {self.pt_hat_bin}")
+      logger.info(f"pt hat weight: {self.pt_hat}")
     else:
       raise ValueError("Can't find the right pT hat bin from input file.")
     with open(self.config_file, 'r') as stream:
