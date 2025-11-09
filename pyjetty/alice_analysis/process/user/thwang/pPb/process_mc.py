@@ -17,7 +17,7 @@ import logging
 # Data analysis and plotting
 import numpy as np
 import ROOT
-# import yaml
+import yaml
 import array
 import math
 # from array import *
@@ -96,6 +96,14 @@ class ProcessMC_ENC(process_mc_base_pPb.ProcessMCBase):
         super(ProcessMC_ENC, self).__init__(input_file, config_file, output_dir, debug_level, **kwargs)
         
         self.observable = self.observable_list[0]
+
+        with open(self.config_file, 'r') as stream:
+            config = yaml.safe_load(stream)
+
+        self.pT_min, self.pT_max, self.pT_nbins = config["pT_binning"]
+        self.RL_min, self.RL_max, self.RL_nbins = config["RL_binning"]
+        self.pT_bins = linbins(self.pT_min,self.pT_max,self.pT_nbins)
+        self.RL_bins = logbins(self.RL_min,self.RL_max,self.RL_nbins)
 
         # self.pair_eff_file = ROOT.TFile.Open("/global/cfs/cdirs/alice/wenqing/mypyjetty/pyjetty/pyjetty/alice_analysis/process/user/wenqing/PairEff.root","READ")
         # # self.dpbin = 5
@@ -244,17 +252,13 @@ class ProcessMC_ENC(process_mc_base_pPb.ProcessMCBase):
                             # name = f'h_{observable+"_"+charge_label+pair_type_label+mult_label}_JetPt_R{jetR}_{trk_thrd}'
                             # name = f'h_{observable+pair_type_label}_JetPt_R{jetR}_{trk_thrd}'
                             name = f'h_{observable+"_"+charge_label+pair_type_label}_JetPt_R{jetR}_{trk_thrd}'
-                            pt_bins = linbins(0,200,200)
-                            RL_bins = logbins(1E-3,1,30)
-                            h = ROOT.TH2D(name, name, 200, pt_bins, 30, RL_bins)
+                            h = ROOT.TH2D(name, name, self.pT_nbins, self.pT_bins, self.RL_nbins, self.RL_bins)
                             h.GetXaxis().SetTitle('p_{T,ch jet}')
                             h.GetYaxis().SetTitle('R_{L}')
                             setattr(self, name, h)
 
                             # name = 'h_{}{}{}Pt_JetPt_R{}_{}'.format(observable, ipoint, pair_type_label, jetR, obs_label) # pt scaled histograms (currently only for unmatched jets)
-                            # pt_bins = linbins(0,200,200)
-                            # ptRL_bins = logbins(1E-3,1E2,60)
-                            # h = ROOT.TH2D(name, name, 200, pt_bins, 60, ptRL_bins)
+                            # h = ROOT.TH2D(name, name, 200, self.pT_bins, 60, ptRL_bins)
                             # h.GetXaxis().SetTitle('p_{T,ch jet}')
                             # h.GetYaxis().SetTitle('p_{T,ch jet}R_{L}') # NB: y axis scaled by jet pt (applied jet by jet)
                             # setattr(self, name, h)
@@ -263,9 +267,7 @@ class ProcessMC_ENC(process_mc_base_pPb.ProcessMCBase):
                             # name = f'h_{observable+"_"+charge_label+pair_type_label+mult_label}_JetPt_Truth_R{jetR}_{trk_thrd}'
                             # name = f'h_{observable+pair_type_label}_JetPt_Truth_R{jetR}_{trk_thrd}'
                             name = f'h_{observable+"_"+charge_label+pair_type_label}_JetPt_Truth_R{jetR}_{trk_thrd}'
-                            pt_bins = linbins(0,200,200)
-                            RL_bins = logbins(1E-3,1,30)
-                            h = ROOT.TH2D(name, name, 200, pt_bins, 30, RL_bins)
+                            h = ROOT.TH2D(name, name, self.pT_nbins, self.pT_bins, self.RL_nbins, self.RL_bins)
                             h.GetXaxis().SetTitle('p_{T,ch jet}')
                             h.GetYaxis().SetTitle('R_{L}')
                             setattr(self, name, h)
@@ -478,15 +480,13 @@ class ProcessMC_ENC(process_mc_base_pPb.ProcessMCBase):
                 
                 if 'jet_pt' in observable:
                     name = 'h_{}_JetPt_R{}_{}'.format(observable, jetR, obs_label)
-                    pt_bins = linbins(0,200,200)
-                    h = ROOT.TH1D(name, name, 200, pt_bins)
+                    h = ROOT.TH1D(name, name, self.pT_nbins, self.pT_bins)
                     h.GetXaxis().SetTitle('p_{T,ch jet}')
                     h.GetYaxis().SetTitle('Counts')
                     setattr(self, name, h)
 
                     name = 'h_{}_JetPt_Truth_R{}_{}'.format(observable, jetR, obs_label)
-                    pt_bins = linbins(0,200,200)
-                    h = ROOT.TH1D(name, name, 200, pt_bins)
+                    h = ROOT.TH1D(name, name, self.pT_nbins, self.pT_bins)
                     h.GetXaxis().SetTitle('p_{T,ch jet}')
                     h.GetYaxis().SetTitle('Counts')
                     setattr(self, name, h)

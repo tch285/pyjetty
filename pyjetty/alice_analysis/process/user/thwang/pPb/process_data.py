@@ -78,6 +78,14 @@ class ProcessData_ENC(process_data_base_pPb.ProcessDataBase):
         self.charge_types = ["P", "M", "PM"]
         self.charge_types_ext = ["P", "M", "PM", "T", "Q"]
 
+        with open(self.config_file, 'r') as stream:
+            config = yaml.safe_load(stream)
+
+        self.pT_min, self.pT_max, self.pT_nbins = config["pT_binning"]
+        self.RL_min, self.RL_max, self.RL_nbins = config["RL_binning"]
+        self.pT_bins = linbins(self.pT_min,self.pT_max,self.pT_nbins)
+        self.RL_bins = logbins(self.RL_min,self.RL_max,self.RL_nbins)
+
     #---------------------------------------------------------------
     # Initialize histograms
     #---------------------------------------------------------------
@@ -89,9 +97,7 @@ class ProcessData_ENC(process_data_base_pPb.ProcessDataBase):
                     obs_label = self.utils.obs_label(trk_thrd, None) 
                     if self.is_pp or self.is_pA:
                         # name = f'h_{observable}Pt_JetPt_R{jetR}_{trk_thrd}'
-                        # pt_bins = linbins(0,200,200)
-                        # ptRL_bins = logbins(1E-3,1E2,60)
-                        # h = ROOT.TH2D(name, name, 200, pt_bins, 60, ptRL_bins)
+                        # h = ROOT.TH2D(name, name, self.pT_nbins, self.pT_bins, 60, ptRL_bins)
                         # h.GetXaxis().SetTitle('p_{T,ch jet}')
                         # h.GetYaxis().SetTitle('p_{T,ch jet}R_{L}') # NB: y axis scaled by jet pt (applied jet by jet)
                         # setattr(self, name, h)
@@ -105,8 +111,7 @@ class ProcessData_ENC(process_data_base_pPb.ProcessDataBase):
 
                         if 'jet_pt' in observable:
                             name = f'h_{observable}_JetPt_R{jetR}_{obs_label}'
-                            pt_bins = linbins(0,200,200)
-                            h = ROOT.TH1D(name, name, 200, pt_bins)
+                            h = ROOT.TH1D(name, name, self.pT_nbins, self.pT_bins)
                             h.GetXaxis().SetTitle('p_{T,ch jet}')
                             h.GetYaxis().SetTitle('Counts')
                             setattr(self, name, h)
@@ -114,8 +119,7 @@ class ProcessData_ENC(process_data_base_pPb.ProcessDataBase):
                             if self.mult_labels[0]:
                                 for mult_label in self.mult_labels:
                                     name = 'h_{}_JetPt_R{}_{}'.format(observable + mult_label, jetR, obs_label)
-                                    pt_bins = linbins(0,200,200)
-                                    h = ROOT.TH1D(name, name, 200, pt_bins)
+                                    h = ROOT.TH1D(name, name, self.pT_nbins, self.pT_bins)
                                     h.GetXaxis().SetTitle('p_{T,ch jet}')
                                     h.GetYaxis().SetTitle('Counts')
                                     setattr(self, name, h)
@@ -131,9 +135,7 @@ class ProcessData_ENC(process_data_base_pPb.ProcessDataBase):
                                 for charge_label in self.charge_types_ext:
                                     for mult_label in self.mult_labels:
                                         name = f'h_{observable+"_"+charge_label+pair_type_label+mult_label}_JetPt_R{jetR}_{trk_thrd}'
-                                        pt_bins = linbins(0,200,200)
-                                        RL_bins = logbins(1E-3,1,30)
-                                        h = ROOT.TH2D(name, name, 200, pt_bins, 30, RL_bins)
+                                        h = ROOT.TH2D(name, name, self.pT_nbins, self.pT_bins, self.RL_nbins, self.RL_bins)
                                         h.GetXaxis().SetTitle('p_{T,ch jet}')
                                         h.GetYaxis().SetTitle('R_{L}')
                                         setattr(self, name, h)
