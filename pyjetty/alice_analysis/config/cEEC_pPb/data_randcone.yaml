@@ -17,6 +17,9 @@ randomize_cone: True
 randomize_cone_seed: False
 mixed_cone: True
 
+RL_binning: [1.0E-2, 0.4, 20] # the period is important as otherwise PyYAML will read it as a string
+pT_binning: [0, 200, 200]
+
 # do_rho_subtraction: True
 do_feedin_check: False
 do_reshuffle: False
