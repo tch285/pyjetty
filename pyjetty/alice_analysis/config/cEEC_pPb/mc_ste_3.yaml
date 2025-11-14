@@ -41,21 +41,21 @@ emb_file_list: '/global/cfs/projectdirs/alice/alicepro/hiccup/rstorage/alice/dat
 do_emb_rotation: False
 
 jet_ENC_RL:
-  config1:
-    trk_thrd: 0.15
-  config2:
-    trk_thrd: 0.5
+  # config1:
+  #   trk_thrd: 0.15
+  # config2:
+  #   trk_thrd: 0.5
   config3:
     trk_thrd: 1.0
-  config4:
-    trk_thrd: 2.0
+  # config4:
+  #   trk_thrd: 2.0
 
 jet_pt:
-  config1:
-    trk_thrd: 0.15
-  config2:
-    trk_thrd: 0.5
+  # config1:
+  #   trk_thrd: 0.15
+  # config2:
+  #   trk_thrd: 0.5
   config3:
     trk_thrd: 1.0
-  config4:
-    trk_thrd: 2.0
+  # config4:
+  #   trk_thrd: 2.0
