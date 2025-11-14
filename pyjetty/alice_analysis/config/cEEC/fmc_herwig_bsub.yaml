@@ -17,7 +17,7 @@ pair_eff_file_phet: "/global/cfs/cdirs/alice/mhwang/cEEC/plots/generator/scaled_
 
 # new additions by Tucker
 pair_eff_on: True
-RL_binning: [1.0E-3, 1, 30] # the period is important as otherwise PyYAML will read it as a string
+RL_binning: [1.0E-2, 0.4, 20] # the period is important as otherwise PyYAML will read it as a string
 pT_binning: [0, 200, 200]
 pTRL_binning: [1.0E-3, 1.0E+2, 60]
 dp_edges: [0.0, 0.02, 0.06, 0.1, 0.14, 0.2, 0.3, 0.4, 0.6, 1.0, 2.0]
