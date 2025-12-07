@@ -1,0 +1,52 @@
+# inspired by
+# https://gitlab.com/sherpa-team/sherpa/-/blob/master/Tests/Physval/lhc_dijet7.yaml
+
+# collider setup
+BEAMS: 2212
+BEAM_ENERGIES: 2510
+
+# TAGS:
+#   LOOPGEN: OpenLoops
+
+# settings for ME generators
+# ME_GENERATORS: Comix
+
+EVENT_OUTPUT:
+  - HepMC3[lund]
+HEPMC3_SHORT: 1
+
+FRAGMENTATION: Pythia8
+PYTHIA8:
+  DECAYS: false
+  SHERPA_MASSES: true
+
+# PROCESSES:
+# - 93 93 -> 93 93:
+#     Order: {QCD: 2, EW: 0}
+#     NLO_Order: {QCD: 1, EW: 0}
+    # NLO_Mode: MC@NLO
+    # ME_Generator: Amegic
+    # ME_Generator: Comix
+    # Loop_Generator: $(LOOPGEN)
+    # RS_ME_Generator: Comix
+
+
+
+SCALES: METS
+MEPS:
+  CORE_SCALE: QCD
+
+SHOWER:
+  IS_AS_FAC: 1
+
+PROCESSES:
+- 93 93 -> 93 93:
+    Order: {QCD: 2, EW: 0}
+    Enhance_Function: VAR{sqr(PPerp2(p[2]))}
+
+SELECTORS:
+- FastjetFinder:
+    Algorithm: antikt
+    N: 1
+    DR: 0.4
+    PTMin: 10

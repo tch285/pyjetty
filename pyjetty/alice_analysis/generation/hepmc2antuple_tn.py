@@ -7,8 +7,8 @@ from time import perf_counter
 import pyhepmc_ng
 
 import hepmc2antuple_base
-import faulthandler
-faulthandler.enable()
+# import faulthandler
+# faulthandler.enable()
 
 ################################################################
 class HepMC2antuple(hepmc2antuple_base.HepMC2antupleBase):
