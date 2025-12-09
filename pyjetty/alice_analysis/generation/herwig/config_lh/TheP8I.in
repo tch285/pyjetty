@@ -1,0 +1,91 @@
+#######################################
+## Initialize TheP8I
+#######################################
+
+mkdir /TheP8I
+mkdir /TheP8I/Handlers
+mkdir /TheP8I/Handlers/StringFrag
+cd /TheP8I
+create TheP8I::TheP8IStrategy StdStrategy libTheP8I.so
+insert StdStrategy:DefaultParticlesDirs[0] /Herwig/Particles
+cd /TheP8I/Handlers/StringFrag
+create TheP8I::StringFragmentation StringFragmenter
+cd /Herwig/Generators
+set EventGenerator:EventHandler:HadronizationHandler /TheP8I/Handlers/StringFrag/StringFragmenter
+
+
+#########################################
+## Set Parameters (LH Tune)
+#########################################
+
+## Herwig Parameters
+set /Herwig/Shower/AlphaQCDFSR:AlphaIn          0.125772
+set /Herwig/Couplings/NLOAlphaS:input_alpha_s   0.125772
+set /Herwig/Shower/PTCutOff:pTmin              1.027660
+
+set /Herwig/Shower/AlphaQCDISR:AlphaIn          	0.124155
+set /Herwig/Shower/ShowerHandler:IntrinsicPtGaussian 	1.304324*GeV
+
+set /Herwig/UnderlyingEvent/MPIHandler:EnergyExtrapolation PowerModified
+set /Herwig/UnderlyingEvent/MPIHandler:ReferenceScale 7000.*GeV
+
+## HARD MPI
+set /Herwig/UnderlyingEvent/MPIHandler:Power 	0.225039
+set /Herwig/UnderlyingEvent/MPIHandler:pTmin0   3.131424*GeV
+set /Herwig/UnderlyingEvent/MPIHandler:Offset   530.496295*GeV
+
+## SOFT MPI
+set /Herwig/Partons/RemnantDecayer:MultiPeriph Yes
+set /Herwig/UnderlyingEvent/MPIHandler:InvRadius 	1.137176*GeV2
+set /Herwig/Partons/RemnantDecayer:ladderMult 		0.570482
+set /Herwig/Partons/RemnantDecayer:ladderbFactor 	0.972881
+set /Herwig/UnderlyingEvent/MPIHandler:DiffractiveRatio 0.210833
+
+
+## Lund String Parameters
+cd /TheP8I/Handlers/StringFrag
+
+## fragmentation params
+set StringFragmenter:StringZ_aLund           0.750043
+set StringFragmenter:StringZ_bLund           0.898493
+set StringFragmenter:StringPT_sigma          0.309940
+set StringFragmenter:StringZ_aExtraSQuark    0.175699
+set StringFragmenter:StringZ_aExtraDiquark   0.053576
+set StringFragmenter:StringZ_rFactC          0.680046
+set StringFragmenter:StringZ_rFactB   	     1.265325
+
+## flavor-related params
+set StringFragmenter:StringFlav_probStoUD     0.190037
+set StringFragmenter:StringFlav_probQQtoQ     0.079770
+set StringFragmenter:StringFlav_probSQtoQQ    0.998577
+set StringFragmenter:StringFlav_probQQ1toQQ0  0.022243
+set StringFragmenter:StringFlav_etaSup        0.512356
+set StringFragmenter:StringFlav_etaPrimeSup   0.184657
+set StringFragmenter:StringFlav_popcornRate   0.734028
+set StringFragmenter:StringFlav_mesonUDvector 0.329842
+set StringFragmenter:StringFlav_mesonSvector  0.676458
+set StringFragmenter:StringFlav_mesonCvector  1.065635
+set StringFragmenter:StringFlav_mesonBvector  1.849178
+
+## colour reconnection
+set StringFragmenter:CRreconnect             	1
+set StringFragmenter:CRforceHadronLevel		1
+set StringFragmenter:CRmode                  	1
+## only for CRmode 1:
+set StringFragmenter:BRremnantMode		1
+
+## The new more QCD based scheme. MODE 1 (used in LH Tune)
+set StringFragmenter:CRm0			2.867604
+set StringFragmenter:CRjunctionCorrection	4.545216
+
+set StringFragmenter:CRnColours			9
+set StringFragmenter:CRsameNeighbourColours	0
+set StringFragmenter:CRallowJunctions		1
+set StringFragmenter:CRallowDoubleJunRem	0
+set StringFragmenter:CRtimeDilationMode		0
+
+## when using Pythia8308
+set StringFragmenter:CRlambdaForm		0
+
+## when using Pythia8315 (not recommended)
+#set StringFragmenter:CRlambdaForm		1
