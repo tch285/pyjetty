@@ -58,10 +58,6 @@ ROOT.TH1.SetDefaultSumw2()
 ROOT.TH2.SetDefaultSumw2()
 
 def charge(p):
-    chf = PDGID(p.pid).charge
-    if chf is None:
-        print(p.pid)
-        print(p)
     return int(PDGID(p.pid).charge)
 
 def isch(p):
@@ -118,28 +114,26 @@ class ProcessSherpa3:
         self.evw = 1
         with pyhepmc.open(self.input_file) as f:
             for i, event in enumerate(f):
-                try:
-                    chp = [p for p in event.particles
-                        if p.status == 1 and isch(p)
-                        and p.momentum.abs_eta() < 0.9
-                        and p.momentum.pt() > self.trk_pT_min]
-                except TypeError as e:
-                    print(i)
-                    print(event)
-                    raise e
+                chp = [p for p in event.particles
+                    if p.status == 1 and isch(p)
+                    and p.momentum.abs_eta() < 0.9
+                    and p.momentum.pt() > self.trk_pT_min]
                 psjv = to_psjv(chp)
-                self.analyze_event(psjv)
+                self.analyze_event(psjv, event.attributes['event_scale'])
                 self.hists['nev'].Fill(1)
         self.save()
 
-    def analyze_event(self, particles):
+    def analyze_event(self, particles, scale):
         cs = fj.ClusterSequence(particles, self.jet_def)
         jets = fj.sorted_by_pt(cs.inclusive_jets())
         jets_selected = self.jet_selector(jets)
         for jet in jets_selected:
-            self.analyze_jet(jet)
+            self.analyze_jet(jet, scale)
 
-    def analyze_jet(self, jet):
+    def analyze_jet(self, jet, scale):
+        if jet.pt() > 4 * scale:
+            logger.warning("Jet pT is too high relative to event scale, rejecting.")
+            return
         self.hists['jet_pT'].Fill(jet.pt(), self.evw)
         parts_sel = self.thr_selector(jet.constituents())
 
