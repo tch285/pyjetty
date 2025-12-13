@@ -12,13 +12,16 @@ BEAM_ENERGIES: 2510
 # ME_GENERATORS: Comix
 
 EVENT_OUTPUT:
-  - HepMC3[lund]
+  - HepMC3[ahadic]
 HEPMC3_SHORT: 1
 
 FRAGMENTATION: Ahadic
 # PYTHIA8:
-#   DECAYS: false
+#   DECAYS: true
 #   SHERPA_MASSES: true
+#   PARAMETERS:
+#     - ParticleDecays:limitTau0: on
+#     - ParticleDecays:tau0Max: 10.0
 
 # PROCESSES:
 # - 93 93 -> 93 93:
@@ -47,4 +50,4 @@ SELECTORS:
     Algorithm: antikt
     N: 1
     DR: 0.4
-    PTMin: 10
+    PTMin: 5
