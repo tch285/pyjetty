@@ -98,6 +98,7 @@ class ProcessSherpa3:
         self.jetR = config.get("jetR", 0.4)
         self.trk_pT_min = config.get("trk_pT_min", 0.15)
         self.trk_pT_thr = config.get("trk_pT_thr", 1.0)
+        self.reject_tail = config.get("reject_tail", 3.0)
 
         self.hists = {
             f"EEC_{ctype}": ROOT.TH2D(f"EEC_{ctype}", f"EEC_{ctype}", self.pT_nbins, self.pT_bins, self.RL_nbins, self.RL_bins)
@@ -131,8 +132,8 @@ class ProcessSherpa3:
             self.analyze_jet(jet, scale)
 
     def analyze_jet(self, jet, scale):
-        if jet.pt() > 4 * scale:
-            logger.warning("Jet pT is too high relative to event scale, rejecting.")
+        if jet.pt() > self.reject_tail * scale:
+            logger.warning(f"Jet pT {jet.pt():.2f} GeV is too high relative to event scale {self.reject_tail:.2f} * {scale:.2f}, rejecting.")
             return
         self.hists['jet_pT'].Fill(jet.pt(), self.evw)
         parts_sel = self.thr_selector(jet.constituents())
