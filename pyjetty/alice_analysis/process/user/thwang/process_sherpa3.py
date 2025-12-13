@@ -112,12 +112,17 @@ class ProcessSherpa3:
 
     def analyze(self):
         with pyhepmc.open(self.input_file) as f:
-            for event in f:
+            for i, event in enumerate(f):
                 self.evw = event.weight(0) / event.weight(2)
-                chp = [p for p in event.particles
-                       if p.status == 1 and isch(p)
-                       and p.momentum.abs_eta() < 0.9
-                       and p.momentum.pt() > self.trk_pT_min]
+                try:
+                    chp = [p for p in event.particles
+                        if p.status == 1 and isch(p)
+                        and p.momentum.abs_eta() < 0.9
+                        and p.momentum.pt() > self.trk_pT_min]
+                except Exception as e:
+                    print(f"Event {i}:")
+                    print(event)
+                    raise e
                 psjv = to_psjv(chp)
                 self.analyze_event(psjv)
                 self.hists['nev'].Fill(1)
