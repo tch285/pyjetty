@@ -42,6 +42,9 @@ class ColoredFormatter(logging.Formatter):
             return f"{color}{formatted_msg}{self.RESET}"
         return super().format(record)
 
+class PidZeroError(Exception):
+    pass
+
 logger = logging.getLogger(__name__)
 
 def linbins(xmin, xmax, nbins):
@@ -58,6 +61,8 @@ ROOT.TH1.SetDefaultSumw2()
 ROOT.TH2.SetDefaultSumw2()
 
 def charge(p):
+    if p.pid == 0:
+        raise PidZeroError
     return int(PDGID(p.pid).charge)
 
 def isch(p):
@@ -119,10 +124,9 @@ class ProcessSherpa3:
                         if p.status == 1 and isch(p)
                         and p.momentum.abs_eta() < 0.9
                         and p.momentum.pt() > self.trk_pT_min]
-                except Exception as e:
-                    print(f"Event {i}:")
-                    print(event)
-                    raise e
+                except PidZeroError as e:
+                    logger.warning(f"Event {i} found with PDG ID 0; skipping event.")
+                    continue
                 psjv = to_psjv(chp)
                 self.analyze_event(psjv)
                 self.hists['nev'].Fill(1)
