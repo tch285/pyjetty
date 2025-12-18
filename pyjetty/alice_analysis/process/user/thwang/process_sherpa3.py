@@ -103,6 +103,7 @@ class ProcessSherpa3:
         self.jetR = config.get("jetR", 0.4)
         self.trk_pT_min = config.get("trk_pT_min", 0.15)
         self.trk_pT_thr = config.get("trk_pT_thr", 1.0)
+        self.reject_tail = config.get("reject_tail", 3.0)
 
         self.hists = {
             f"EEC_{ctype}": ROOT.TH2D(f"EEC_{ctype}", f"EEC_{ctype}", self.pT_nbins, self.pT_bins, self.RL_nbins, self.RL_bins)
@@ -124,19 +125,21 @@ class ProcessSherpa3:
                         if p.status == 1 and isch(p)
                         and p.momentum.abs_eta() < 0.9
                         and p.momentum.pt() > self.trk_pT_min]
-                except PidZeroError as e:
+                except PidZeroError:
                     logger.warning(f"Event {i} found with PDG ID 0; skipping event.")
                     continue
                 psjv = to_psjv(chp)
-                self.analyze_event(psjv)
+                self.analyze_event(psjv, event.attributes['event_scale'].astype(float))
                 self.hists['nev'].Fill(1)
         self.save()
 
-    def analyze_event(self, particles):
+    def analyze_event(self, particles, scale):
         cs = fj.ClusterSequence(particles, self.jet_def)
-        jets = fj.sorted_by_pt(cs.inclusive_jets())
-        jets_selected = self.jet_selector(jets)
-        for jet in jets_selected:
+        jets = self.jet_selector(fj.sorted_by_pt(cs.inclusive_jets()))
+        if self.reject_tail and jets and jets[0].pt() > self.reject_tail * scale:
+            logger.warning(f"Found abnormal event {self.iev} (skipping):\n\tpThat={scale:.3f} GeV\n\tjets: {[j.pt() for j in jets]}, ratio {jets[0].pt() / scale:.3f}")
+            return
+        for jet in jets:
             self.analyze_jet(jet)
 
     def analyze_jet(self, jet):

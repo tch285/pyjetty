@@ -126,15 +126,14 @@ class ProcessSherpa3:
 
     def analyze_event(self, particles, scale):
         cs = fj.ClusterSequence(particles, self.jet_def)
-        jets = fj.sorted_by_pt(cs.inclusive_jets())
-        jets_selected = self.jet_selector(jets)
-        for jet in jets_selected:
+        jets = self.jet_selector(fj.sorted_by_pt(cs.inclusive_jets()))
+        if self.reject_tail and jets and jets[0].pt() > self.reject_tail * scale:
+            logger.warning(f"Found abnormal event {self.iev} (skipping):\n\tpThat={scale:.3f} GeV\n\tjets: {[j.pt() for j in jets]}, ratio {jets[0].pt() / scale:.3f}")
+            return
+        for jet in jets:
             self.analyze_jet(jet, scale)
 
     def analyze_jet(self, jet, scale):
-        if jet.pt() > self.reject_tail * scale:
-            logger.warning(f"Jet pT {jet.pt():.2f} GeV is too high relative to event scale {self.reject_tail:.2f} * {scale:.2f}, rejecting.")
-            return
         self.hists['jet_pT'].Fill(jet.pt(), self.evw)
         parts_sel = self.thr_selector(jet.constituents())
 
