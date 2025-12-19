@@ -2,3 +2,5 @@ jetR: 0.4
 
 RL_binning: [1.0E-2, 0.4, 20] # the period is important as otherwise PyYAML will read it as a string
 pT_binning: [0, 200, 200]
+scale_binning: [0, 10000, 200]
+ratio_binning: [1.0E-2, 5, 200]
