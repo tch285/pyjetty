@@ -126,7 +126,7 @@ class ProcessSherpa3:
 
     def analyze(self):
         with pyhepmc.open(self.input_file) as f:
-            for i, event in enumerate(f):
+            for self.iev, event in enumerate(f):
                 self.evw = event.weight(0) / event.weight(2)
                 try:
                     chp = [p for p in event.particles
@@ -134,7 +134,7 @@ class ProcessSherpa3:
                         and p.momentum.abs_eta() < 0.9
                         and p.momentum.pt() > self.trk_pT_min]
                 except PidZeroError:
-                    logger.warning(f"Event {i} found with PDG ID 0; skipping event.")
+                    logger.warning(f"Event {self.iev} found with PDG ID 0; skipping event.")
                     continue
                 psjv = to_psjv(chp)
                 self.analyze_event(psjv, event.attributes['event_scale'].astype(float), event.pdf_info.scale)
