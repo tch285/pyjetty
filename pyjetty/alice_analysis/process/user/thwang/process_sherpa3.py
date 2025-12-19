@@ -155,8 +155,8 @@ class ProcessSherpa3:
             self.hists['ratio'].Fill(jets[0].pt() / scale)
             self.hists['ratio_pdf'].Fill(jets[0].pt() / pdfscale)
             self.hists['ratio_pdf_wt'].Fill(jets[0].pt() / pdfscale, self.evw)
-        if self.reject_tail and jets and jets[0].pt() > self.reject_tail * scale:
-            logger.warning(f"Found abnormal event {self.iev} (skipping):\n\tpThat={scale:.3f} GeV\n\tjets: {[j.pt() for j in jets]}, ratio {jets[0].pt() / scale:.3f}")
+        if self.reject_tail and jets and jets[0].pt() > self.reject_tail * pdfscale:
+            logger.warning(f"Found abnormal event {self.iev} (skipping):\n\tpThat={pdfscale:.3f} GeV\n\tjets: {[j.pt() for j in jets]}, ratio {jets[0].pt() / pdfscale:.3f}")
             return
         for jet in jets:
             self.analyze_jet(jet)
