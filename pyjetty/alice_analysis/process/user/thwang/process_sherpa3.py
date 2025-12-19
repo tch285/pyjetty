@@ -117,6 +117,7 @@ class ProcessSherpa3:
         self.hists['scale'] = ROOT.TH1D('scale', 'scale', self.scale_nbins, self.scale_bins)
         self.hists['scale_wt'] = ROOT.TH1D('scale_wt', 'scale_wt', self.scale_nbins, self.scale_bins)
         self.hists['ratio'] = ROOT.TH1D('ratio', 'ratio', self.ratio_nbins, self.ratio_bins)
+        self.hists['ratio_pdf'] = ROOT.TH1D('ratio_pdf', 'ratio_pdf', self.ratio_nbins, self.ratio_bins)
         self.hists['nev'] = ROOT.TH1D('nev', 'nev', 2, -0.5, 1.5)
         self.jet_def = fj.JetDefinition(fj.antikt_algorithm, self.jetR)
         self.jet_selector = fj.SelectorPtMin(5.0) & fj.SelectorAbsEtaMax(0.9 - self.jetR)
@@ -136,17 +137,19 @@ class ProcessSherpa3:
                     logger.warning(f"Event {i} found with PDG ID 0; skipping event.")
                     continue
                 psjv = to_psjv(chp)
-                self.analyze_event(psjv, event.attributes['event_scale'].astype(float))
+                self.analyze_event(psjv, event.attributes['event_scale'].astype(float), event.pdf_info.scale)
                 self.hists['nev'].Fill(1)
         self.save()
 
-    def analyze_event(self, particles, scale):
+    def analyze_event(self, particles, scale, pdfscale):
         cs = fj.ClusterSequence(particles, self.jet_def)
         jets = self.jet_selector(fj.sorted_by_pt(cs.inclusive_jets()))
+        logger.warning(f"event_scale: {scale}, PDF scale: {pdfscale}")
         self.hists['scale'].Fill(scale)
         self.hists['scale_wt'].Fill(scale, self.evw)
         if jets:
             self.hists['ratio'].Fill(jets[0].pt() / scale)
+            self.hists['ratio_pdf'].Fill(jets[0].pt() / pdfscale)
         if self.reject_tail and jets and jets[0].pt() > self.reject_tail * scale:
             logger.warning(f"Found abnormal event {self.iev} (skipping):\n\tpThat={scale:.3f} GeV\n\tjets: {[j.pt() for j in jets]}, ratio {jets[0].pt() / scale:.3f}")
             return
