@@ -98,10 +98,12 @@ class ProcessSherpa3:
         self.pT_min, self.pT_max, self.pT_nbins = config["pT_binning"]
         self.RL_min, self.RL_max, self.RL_nbins = config["RL_binning"]
         self.scale_min, self.scale_max, self.scale_nbins = config["scale_binning"]
+        self.pdf_min, self.pdf_max, self.pdf_nbins = config["pdf_binning"]
         self.ratio_min, self.ratio_max, self.ratio_nbins = config["ratio_binning"]
         self.pT_bins = linbins(self.pT_min,self.pT_max,self.pT_nbins)
         self.RL_bins = logbins(self.RL_min,self.RL_max,self.RL_nbins)
         self.scale_bins = linbins(self.scale_min,self.scale_max,self.scale_nbins)
+        self.pdf_bins = linbins(self.pdf_min,self.pdf_max,self.pdf_nbins)
         self.ratio_bins = logbins(self.ratio_min,self.ratio_max,self.ratio_nbins)
         self.ctypes = ["T", "P", "M", "PM", "Q"]
         self.jetR = config.get("jetR", 0.4)
@@ -116,8 +118,10 @@ class ProcessSherpa3:
         self.hists['jet_pT'] = ROOT.TH1D('jet_pT', 'jet_pT', self.pT_nbins, self.pT_bins)
         self.hists['scale'] = ROOT.TH1D('scale', 'scale', self.scale_nbins, self.scale_bins)
         self.hists['scale_wt'] = ROOT.TH1D('scale_wt', 'scale_wt', self.scale_nbins, self.scale_bins)
+        self.hists['pdf'] = ROOT.TH1D('pdf', 'pdf', self.pdf_nbins, self.pdf_bins)
         self.hists['ratio'] = ROOT.TH1D('ratio', 'ratio', self.ratio_nbins, self.ratio_bins)
         self.hists['ratio_pdf'] = ROOT.TH1D('ratio_pdf', 'ratio_pdf', self.ratio_nbins, self.ratio_bins)
+        self.hists['ratio_pdf_wt'] = ROOT.TH1D('ratio_pdf_wt', 'ratio_pdf_wt', self.ratio_nbins, self.ratio_bins)
         self.hists['nev'] = ROOT.TH1D('nev', 'nev', 2, -0.5, 1.5)
         self.jet_def = fj.JetDefinition(fj.antikt_algorithm, self.jetR)
         self.jet_selector = fj.SelectorPtMin(5.0) & fj.SelectorAbsEtaMax(0.9 - self.jetR)
@@ -144,12 +148,13 @@ class ProcessSherpa3:
     def analyze_event(self, particles, scale, pdfscale):
         cs = fj.ClusterSequence(particles, self.jet_def)
         jets = self.jet_selector(fj.sorted_by_pt(cs.inclusive_jets()))
-        logger.warning(f"event_scale: {scale}, PDF scale: {pdfscale}")
         self.hists['scale'].Fill(scale)
         self.hists['scale_wt'].Fill(scale, self.evw)
+        self.hists['pdf'].Fill(pdfscale)
         if jets:
             self.hists['ratio'].Fill(jets[0].pt() / scale)
             self.hists['ratio_pdf'].Fill(jets[0].pt() / pdfscale)
+            self.hists['ratio_pdf_wt'].Fill(jets[0].pt() / pdfscale, self.evw)
         if self.reject_tail and jets and jets[0].pt() > self.reject_tail * scale:
             logger.warning(f"Found abnormal event {self.iev} (skipping):\n\tpThat={scale:.3f} GeV\n\tjets: {[j.pt() for j in jets]}, ratio {jets[0].pt() / scale:.3f}")
             return
