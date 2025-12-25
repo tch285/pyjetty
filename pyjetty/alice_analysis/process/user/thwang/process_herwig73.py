@@ -99,6 +99,7 @@ class ProcessSherpa3:
         self.trk_pT_min = config.get("trk_pT_min", 0.15)
         self.trk_pT_thr = config.get("trk_pT_thr", 1.0)
         self.reject_tail = config.get("reject_tail", 3.0)
+        logger.info(f"Tail rejection set to: {self.reject_tail}")
 
         self.hists = {
             f"EEC_{ctype}": ROOT.TH2D(f"EEC_{ctype}", f"EEC_{ctype}", self.pT_nbins, self.pT_bins, self.RL_nbins, self.RL_bins)
