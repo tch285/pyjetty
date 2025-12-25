@@ -22,6 +22,9 @@ FRAGMENTATION: Ahadic
 #   PARAMETERS:
 #     - ParticleDecays:limitTau0: on
 #     - ParticleDecays:tau0Max: 10.0
+HADRON_DECAYS:
+  Model: HADRONS++
+  Max_Proper_Lifetime: 10.0
 
 # PROCESSES:
 # - 93 93 -> 93 93:
