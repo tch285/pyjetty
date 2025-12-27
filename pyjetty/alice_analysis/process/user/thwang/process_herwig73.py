@@ -115,7 +115,7 @@ class ProcessSherpa3:
     def analyze(self):
         self.evw = 1
         with pyhepmc.open(self.input_file) as f:
-            for i, event in enumerate(f):
+            for self.iev, event in enumerate(f):
                 chp = [p for p in event.particles
                     if p.status == 1 and isch(p)
                     and p.momentum.abs_eta() < 0.9
