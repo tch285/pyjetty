@@ -79,7 +79,7 @@ def deltaR(p1, p2):
     return np.sqrt(deta*deta + dphi*dphi)
 
 ################################################################
-class ProcessSherpa3:
+class ProcessHerwig73:
 
     #---------------------------------------------------------------
     # Constructor
@@ -202,5 +202,5 @@ if __name__ == '__main__':
         logger.critical(f"Config file '{args.config_file}' does not exist, exiting.")
         sys.exit(1)
 
-    analysis = ProcessSherpa3(input_file=args.input_file, config_file=args.config_file, output_file=args.output_file)
+    analysis = ProcessHerwig73(input_file=args.input_file, config_file=args.config_file, output_file=args.output_file)
     analysis.analyze()
