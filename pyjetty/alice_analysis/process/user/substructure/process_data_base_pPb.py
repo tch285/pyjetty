@@ -106,10 +106,12 @@ class ProcessDataBase(process_base.ProcessBase):
         self.randomize_cone = config['randomize_cone'] if 'randomize_cone' in config else False
         self.mixed_cone = config['mixed_cone'] if 'mixed_cone' in config else False
         self.matched_cone = config['matched_cone'] if 'matched_cone' in config else False
+        self.rho_smear = config.get('rho_smear', False)
         logger.info(f"Perp cone: {self.do_perpendicular_cone}")
         logger.info(f"Random cone: {self.randomize_cone}")
         logger.info(f"Mixed cone: {self.mixed_cone}")
         logger.info(f"Cone radius matching: {self.matched_cone}")
+        logger.info(f"Background rho smearing: {self.rho_smear}")
         if self.randomize_cone:
             if 'randomize_cone_seed' in config and config['randomize_cone_seed']:
                 self.rng_seed = config['randomize_cone_seed']
@@ -117,7 +119,14 @@ class ProcessDataBase(process_base.ProcessBase):
                 self.rng_seed = None
             logger.info(f"Random cone RNG built with seed: {self.rng_seed}")
             self.rng = np.random.default_rng(seed = self.rng_seed)
-        
+        if self.rho_smear:
+            if 'rho_smear_seed' in config and config['rho_smear_seed']:
+                self.rng_seed_rho_smear = config['rho_smear_seed']
+            else:
+                self.rng_seed_rho_smear = None
+            logger.info(f"Rho smearing RNG built with seed: {self.rng_seed_rho_smear}")
+            self.rng_rho_smear = np.random.Generator(np.random.MT19937(seed = self.rng_seed_rho_smear))
+
         if self.do_median_subtraction or self.do_perpendicular_cone:
             self.is_pp = False
             self.is_pA = True
@@ -453,6 +462,9 @@ class ProcessDataBase(process_base.ProcessBase):
                 csa_medsub = fj.ClusterSequenceArea(fj_particles, self.jet_def_medsub[jetR], fj.AreaDefinition(fj.active_area_explicit_ghosts))
                 self.median_subtractor[jetR].set_cluster_sequence(csa_medsub)
                 rho = self.median_subtractor[jetR].rho()
+                if self.rho_smear:
+                    sigma = self.median_subtractor[jetR].sigma()
+                    rho = self.rng_rho_smear.normal(rho, sigma)
                 # getattr(self, 'hMedRho_R{}'.format(jetR)).Fill(rho)
 
                 # Cjet_selector = fj.SelectorAbsRapMax(0.9 - jetR) & (~fj.SelectorIsPureGhost())
