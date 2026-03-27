@@ -168,6 +168,20 @@ class ProcessMCBase(process_base.ProcessBase):
         
         self.do_perpendicular_cone = config['do_perpendicular_cone'] if 'do_perpendicular_cone' in config else False
         self.randomize_cone = config['randomize_cone'] if 'randomize_cone' in config else False
+
+        self.rho_smear = config.get('rho_smear', False)
+        logger.info(f"Perp cone: {self.do_perpendicular_cone}")
+        logger.info(f"Random cone: {self.randomize_cone}")
+        logger.info(f"Background rho smearing: {self.rho_smear}")
+
+        if self.rho_smear:
+            if 'rho_smear_seed' in config and config['rho_smear_seed']:
+                self.rng_seed_rho_smear = config['rho_smear_seed']
+            else:
+                self.rng_seed_rho_smear = None
+            logger.info(f"Rho smearing RNG built with seed: {self.rng_seed_rho_smear}")
+            self.rng_rho_smear = np.random.Generator(np.random.MT19937(seed = self.rng_seed_rho_smear))
+
         if self.do_constituent_subtraction:
             self.is_pp = False
             self.is_pA = False
@@ -868,6 +882,11 @@ class ProcessMCBase(process_base.ProcessBase):
                 csa_medsub = fj.ClusterSequenceArea(fj_particles_combined_beforeCS, self.jet_def_medsub[jetR], fj.AreaDefinition(fj.active_area_explicit_ghosts))
                 self.median_subtractor[jetR].set_cluster_sequence(csa_medsub)
                 rho = self.median_subtractor[jetR].rho()
+                if self.rho_smear:
+                    sigma = self.median_subtractor[jetR].sigma()
+                    rho = self.rng_rho_smear.normal(rho, sigma)
+                    if rho < 0:
+                        rho = 0
                 # getattr(self, 'hMedRho_R{}'.format(jetR)).Fill(rho)
 
                 Cjet_selector = self.Cjet_selectors[jetR]
@@ -885,6 +904,11 @@ class ProcessMCBase(process_base.ProcessBase):
                 csa_medsub_truth = fj.ClusterSequenceArea(fj_particles_truth, self.jet_def_medsub[jetR], fj.AreaDefinition(fj.active_area_explicit_ghosts))
                 self.median_subtractor_truth[jetR].set_cluster_sequence(csa_medsub_truth)
                 rho_truth = self.median_subtractor_truth[jetR].rho()
+                if self.rho_smear:
+                    sigma_truth = self.median_subtractor_truth[jetR].sigma()
+                    rho_truth = self.rng_rho_smear.normal(rho_truth, sigma_truth)
+                    if rho_truth < 0:
+                        rho_truth = 0
                 # medsub_selected_jets_truth = fj.sorted_by_pt(Cjet_selector(csa_medsub_truth.inclusive_jets()))
                 medsub_selected_jets_truth = Cjet_selector(csa_medsub_truth.inclusive_jets())
                 C_area_truth = np.sum([jet.area() for jet in medsub_selected_jets_truth]) / (2 * np.pi * 2 * 0.9)
