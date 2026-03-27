@@ -465,6 +465,8 @@ class ProcessDataBase(process_base.ProcessBase):
                 if self.rho_smear:
                     sigma = self.median_subtractor[jetR].sigma()
                     rho = self.rng_rho_smear.normal(rho, sigma)
+                    if rho < 0:
+                        rho = 0
                 # getattr(self, 'hMedRho_R{}'.format(jetR)).Fill(rho)
 
                 # Cjet_selector = fj.SelectorAbsRapMax(0.9 - jetR) & (~fj.SelectorIsPureGhost())
