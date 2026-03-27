@@ -884,7 +884,8 @@ class ProcessMCBase(process_base.ProcessBase):
                 rho = self.median_subtractor[jetR].rho()
                 if self.rho_smear:
                     sigma = self.median_subtractor[jetR].sigma()
-                    rho = self.rng_rho_smear.normal(rho, sigma)
+                    nsig = self.rng_rho_smear.normal(0, 1)
+                    rho = rho + (nsig * sigma)
                     if rho < 0:
                         rho = 0
                 # getattr(self, 'hMedRho_R{}'.format(jetR)).Fill(rho)
@@ -906,7 +907,7 @@ class ProcessMCBase(process_base.ProcessBase):
                 rho_truth = self.median_subtractor_truth[jetR].rho()
                 if self.rho_smear:
                     sigma_truth = self.median_subtractor_truth[jetR].sigma()
-                    rho_truth = self.rng_rho_smear.normal(rho_truth, sigma_truth)
+                    rho_truth = rho_truth + (nsig * sigma_truth)
                     if rho_truth < 0:
                         rho_truth = 0
                 # medsub_selected_jets_truth = fj.sorted_by_pt(Cjet_selector(csa_medsub_truth.inclusive_jets()))
